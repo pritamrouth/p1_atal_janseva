@@ -1,0 +1,393 @@
+Ataljanseva ChatBot 
+
+Hi
+1. First Message 
+
+(Hero Banner Image)
+👋 Hi +91 97690 60462
+Please select your preferred language from below 👇!!
+
+कृपया तुमची पसंतीची भाषा निवडा 👇!! 
+
+कृपया नीचे से अपनी पसंदीदा भाषा चुनें 👇!!
+
+Marathi
+English
+Hindi 
+
+
+
+2. Second Message
+
+(Hero Banner Image)
+This is the Ataljanseva Citizen Service Automatic Reply Chatbot.
+
+To continue further, please enter your 6-digit PIN Code in the following format 👇!!.
+
+📍 PIN Code
+Example: 400601
+
+
+3.Third Message
+
+You entered PIN Code 401303 successfully.
+
+Please select your Leader from the list below 👇!!
+                      Select Leader
+
+Marathi
+
+आपण पिन कोड 401303 यशस्वीरित्या टाकला आहे.
+कृपया खालील यादीमधून आपल्या नेत्याची निवड करा 👇!!
+नेता निवडा
+
+HINDI:
+
+
+आपने पिन कोड 401303 सफलतापूर्वक दर्ज किया है।
+कृपया नीचे दी गई सूची में से अपने नेता का चयन करें 👇!!
+नेता चुनें
+
+
+
+
+
+
+4. Fourth Message (Personal number Whatsapp chatbot starts from here)
+
+ Leaders Image 
+🎖️Leader’s Name
+🎖️ BJP
+
+Welcome to (Leader’s Name’s) E-Office
+Select Option 
+
+Raise Complaint(1)
+Track Complaint(2)
+Schedule Meeting(3) 
+About Leader(4)	
+Transparency Board(5) 
+Work Reports(6)
+Events & Meetings(7)
+Schemes & Services(8)
+JanSeva Connect(9)
+NariShakti(10)
+Swadeshi - Made in India(11)
+Youth Engagement Campaigns(12)
+Join Our Team(13)
+
+MARATHI 
+🎖️ नेत्याचे नाव
+🎖️ भाजपा
+
+(नेत्याच्या नावाच्या) ई-ऑफिसमध्ये आपले स्वागत आहे
+पर्याय निवडा
+
+तक्रार नोंदवा
+तक्रारीची स्थिती तपासा
+भेटीची वेळ निश्चित करा
+नेत्याबद्दल माहिती
+पारदर्शकता बोर्ड
+कामाचा अहवाल
+कार्यक्रम आणि बैठका
+योजना आणि सेवा
+जनसेवा कनेक्ट
+नारीशक्ती
+स्वदेशी - मेड इन इंडिया
+युवा सहभाग मोहीम
+आमच्या टीममध्ये सामील व्हा
+
+ HINDI 
+
+🎖️ नेता का नाम
+🎖️ भाजपा
+(नेता जी के नाम) के ई-ऑफिस में आपका स्वागत है
+विकल्प चुनें
+शिकायत दर्ज करें
+शिकायत की स्थिति देखें
+मीटिंग तय करें
+नेता के बारे में
+पारदर्शिता बोर्ड
+कार्य रिपोर्ट
+कार्यक्रम और बैठकें
+योजनाएं और सेवाएं
+जनसेवा कनेक्ट
+नारीशक्ति
+स्वदेशी - मेड इन इंडिया
+युवा सहभाग अभियान
+हमारी टीम से जुड़ें
+
+
+
+(1)
+To raise your complaint, please send your details in this format:
+Enter your full name:
+Describe your complaint:
+Enter the address or share the location where this complaint occurred:
+
+Example:
+Enter your full name: Amit Sharma
+Describe your complaint: Garbage not collected in our area since 3 days 
+Enter the address or share the location where this complaint occurred: Near Hanuman Mandir, Jintur 
+
+Your complaint has been raised successfully!
+Your Ticket ID is: {{1}}
+You can use this ID to track your complaint status. Thank you!
+
+Marathi
+
+आपली तक्रार नोंदवण्यासाठी, कृपया आपली माहिती या फॉरमॅटमध्ये पाठवा:
+आपले पूर्ण नाव टाका:
+आपल्या तक्रारीचे वर्णन करा:
+जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेयर करा:
+
+उदाहरण:
+
+
+आपले पूर्ण नाव टाका: अमित शर्मा
+आपल्या तक्रारीचे वर्णन करा: आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही
+जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेयर करा: हनुमान मंदिराजवळ, जिंतूर
+
+आपली तक्रार यशस्वीरित्या नोंदवली गेली आहे!
+आपला तिकीट ID आहे: {{1}}
+आपण या ID द्वारे आपल्या तक्रारीची स्थिती तपासू शकता। धन्यवाद!
+
+
+Hindi
+
+अपनी शिकायत दर्ज करने के लिए, कृपया अपना विवरण इस फॉर्मेट में भेजें:
+अपना पूरा नाम दर्ज करें:
+अपनी शिकायत का वर्णन करें:
+वह पता दर्ज करें या लोकेशन शेयर करें जहाँ यह शिकायत हुई है:
+
+उदाहरण:
+
+
+अपना पूरा नाम दर्ज करें: अमित शर्मा
+अपनी शिकायत का वर्णन करें: हमारे इलाके में पिछले 3 दिनों से कचरा नहीं उठाया गया है
+वह पता दर्ज करें या लोकेशन शेयर करें जहाँ यह शिकायत हुई है: हनुमान मंदिर के पास, जिंतूर
+
+आपकी शिकायत सफलतापूर्वक दर्ज कर ली गई है!
+आपका टिकट ID है: {{1}}
+आप इस ID से अपनी शिकायत की स्थिति देख सकते हैं। धन्यवाद!
+
+
+
+(2)
+To track your complaint, please enter your Ticket ID:
+Ticket ID: {{1}}
+Status Messages: 
+Your complaint is in progress.
+
+
+Ticket ID: {{1}}
+Your complaint has been resolved.
+
+
+Ticket ID: {{1}}
+For Invalid ID:Invalid Ticket ID. 
+Please check and enter the correct Ticket ID.
+
+
+ MARATHI 
+आपल्या तक्रारीचा मागोवा घेण्यासाठी, कृपया आपला तिकीट ID टाका:
+तिकीट ID: {{1}}
+
+
+स्टेटस मेसेज:
+आपल्या तक्रारीवर काम सुरू आहे.
+
+तिकीट ID: {{1}}
+आपल्या तक्रारीचे निराकरण झाले आहे.
+
+तिकीट ID: {{1}}
+अवैध ID साठी: 
+अवैध तिकीट ID
+कृपया योग्य तिकीट ID तपासून पुन्हा टाका
+
+HINDI —
+अपनी शिकायत को ट्रैक करने के लिए, कृपया अपना टिकट ID दर्ज करें:
+
+टिकट ID: {{1}}
+स्टेटस मैसेज:
+आपकी शिकायत पर काम चल रहा है।टिकट ID: {{1}}
+
+
+आपकी शिकायत का समाधान हो गया है।टिकट ID: {{1}}
+
+
+अमान्य ID के लिए: अमान्य टिकट ID। 
+कृपया सही टिकट ID जाँच कर दर्ज करें।
+
+
+
+(3)
+To schedule a meeting, please share your details in this format:
+Full Name:
+Preferred Date (DD-MM-YYYY):
+Reason for Appointment:
+
+
+Please choose from the available slots:
+
+English:
+Your appointment has been scheduled successfully.
+
+
+HINDI:
+
+मीटिंग तय करने के लिए, कृपया अपनी जानकारी इस फॉर्मेट में साझा करें:
+पूरा नाम:
+पसंदीदा तारीख (DD-MM-YYYY):
+अपॉइंटमेंट का कारण:
+
+कृपया उपलब्ध समय में से चुनें:
+
+आपकी अपॉइंटमेंट सफलतापूर्वक तय कर दी गई है|
+
+MARATHI:
+
+भेट निश्चित करण्यासाठी, कृपया आपली माहिती या स्वरूपात शेअर करा:
+पूर्ण नाव:
+पसंतीची तारीख (DD-MM-YYYY):
+भेटीचे कारण:
+
+कृपया उपलब्ध वेळांमधून निवडा:
+
+आपली भेट यशस्वीरित्या निश्चित करण्यात आली आहे.
+
+(4)
+To know more details about (leader’s Name), please visit:ataljanseva.in
+
+HINDI:
+(नेता के नाम) के बारे में अधिक जानकारी के लिए, कृपया देखें: ataljanseva.in
+
+MARATHI:
+(नेत्याचे नाव) यांच्याबद्दल अधिक माहितीसाठी, कृपया भेट द्या: ataljanseva.in
+
+(5)Transparency Board
+To view the Transparency Board, Work Reports, Event & Meeting details, please visit: ataljanseva.in
+
+*MARATHI:*पारदर्शकता फलक
+पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in
+
+
+*HINDI:* पारदर्शिता बोर्ड
+
+
+पारदर्शिता बोर्ड, कार्य रिपोर्ट, कार्यक्रम और बैठक की जानकारी देखने के लिए, कृपया देखें: ataljanseva.in
+
+
+
+
+
+
+
+(6)Work Reports
+To view the Transparency Board, Work Reports, Event & Meeting details, please visit: ataljanseva.in
+
+
+*MARATHI:*कामाचा अहवाल
+पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in
+
+Hindi: कार्य रिपोर्ट
+पारदर्शिता बोर्ड, कार्य रिपोर्ट, कार्यक्रम और बैठक की जानकारी देखने के लिए, कृपया देखें: ataljanseva.in
+
+
+
+
+
+
+(7)
+To view the Transparency Board, Work Reports, Event & Meeting details, please visit: ataljanseva.in
+
+*MARATHI:*कार्यक्रम आणि बैठकीची माहिती
+पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in
+
+Hindi: कार्यक्रम और बैठक की जानकारी
+पारदर्शिता बोर्ड, कार्य रिपोर्ट, कार्यक्रम और बैठक की जानकारी देखने के लिए, कृपया देखें: ataljanseva.in
+
+(8)
+Schemes and services
+To avail the benefits of various schemes and services, please visit: ataljanseva.in
+
+MARATHI:
+योजना आणि सेवा
+विविध योजना आणि सेवांचा लाभ घेण्यासाठी, कृपया भेट द्या: ataljanseva.in
+
+HINDI:योजनाएं और सेवाएं,
+विभिन्न योजनाओं और सेवाओं का लाभ उठाने के लिए, कृपया देखें: ataljanseva.in
+
+
+
+
+
+(9)
+JanSeva Connect focuses on Vocal for Local. With this feature, citizens can offer or explore local services, find job opportunities, and grow their business.
+To know more about JanSeva Connect, please visit ataljanseva.in
+
+MARATHI:
+जनसेवा कनेक्ट 'व्होकल फॉर लोकल' वर लक्ष केंद्रित करते. या सुविधेद्वारे नागरिक स्थानिक सेवा देऊ किंवा घेऊ शकतात, नोकरीच्या संधी शोधू शकतात आणि आपला व्यवसाय वाढवू शकतात.
+जनसेवा कनेक्ट बद्दल अधिक जाणून घेण्यासाठी, कृपया भेट द्या: ataljanseva.in
+
+HINDI:जनसेवा कनेक्ट 'वोकल फॉर लोकल' पर केंद्रित है। इस फीचर के माध्यम से नागरिक स्थानीय सेवाएं दे या ले सकते हैं, नौकरी के अवसर ढूंढ सकते हैं और अपने व्यवसाय को बढ़ा सकते हैं।
+जनसेवा कनेक्ट के बारे में अधिक जानने के लिए, कृपया देखें: ataljanseva.in
+ 
+(10)
+NariShakti focuses on women's financial independence. 
+With this feature, women can offer or explore local services, find job opportunities, and grow their business.To know more about NariShakti, visit: ataljanseva.in
+
+MARATHI:
+नारीशक्ती महिलांच्या आर्थिक स्वावलंबनावर लक्ष केंद्रित करते.
+या सुविधेद्वारे महिला स्थानिक सेवा देऊ किंवा घेऊ शकतात, नोकरीच्या संधी शोधू शकतात आणि आपला व्यवसाय वाढवू शकतात. नारीशक्ती बद्दल अधिक जाणून घेण्यासाठी भेट द्या: ataljanseva.in
+
+HINDI:
+नारीशक्ति महिला आर्थिक स्वतंत्रता पर केंद्रित है।
+इस फीचर के माध्यम से महिलाएं स्थानीय सेवाएं दे या ले सकती हैं, नौकरी के अवसर ढूंढ सकती हैं और अपने व्यवसाय को बढ़ा सकती हैं। नारीशक्ति के बारे में अधिक जानने के लिए देखें: ataljanseva.in
+
+
+(11)
+ENGLISH *
+Support Swadeshi, Support India!
+Buy and Sell Made-in-India products on ataljanseva.in, grow your business and make our nation Atmanirbhar!
+
+*HINDI:*
+स्वदेशी अपनाएं, भारत को सशक्त बनाएं!
+ataljanseva.in पर Made-in-India उत्पाद खरीदें और बेचें, अपने व्यवसाय को बढ़ाएं और हमारे राष्ट्र को आत्मनिर्भर बनाएं!
+
+*MARATHI:*
+स्वदेशीला पाठिंबा द्या, भारताला पाठिंबा द्या!
+ataljanseva.in वर Made-in-India उत्पादने खरेदी आणि विक्री करा, आपला व्यवसाय वाढवा आणि आपला देश आत्मनिर्भर बनवा!
+
+(12)
+Youth Engagement Campaigns
+A social initiative where leaders and citizens come together to work for the betterment of society, creating a positive impact that benefits everyone.
+To know more about Social Campaigns, visit: ataljanseva.in
+
+MARATHI:
+युवा सहभाग मोहीम
+एक सामाजिक उपक्रम जिथे नेते आणि नागरिक समाजाच्या हितासाठी एकत्र येऊन काम करतात, सकारात्मक बदल घडवतात ज्याचा फायदा सर्वांना होतो.
+सामाजिक मोहिमांबद्दल अधिक जाणून घेण्यासाठी भेट द्या: ataljanseva.in
+
+HINDI:
+युवा सहभाग अभियान
+एक सामाजिक पहल जहाँ नेता और नागरिक समाज की बेहतरी के लिए एक साथ आते हैं, एक सकारात्मक प्रभाव बनाते हैं जिससे सभी को लाभ होता है।
+सामाजिक अभियानों के बारे में अधिक जानने के लिए देखें: ataljanseva.in
+
+
+(13)
+To become a part of our team, please visit ataljanseva.in and apply now.
+
+MARATHI:
+आमच्या टीमचा भाग होण्यासाठी, कृपया ataljanseva.in ला भेट द्या आणि आत्ताच अर्ज करा.
+
+HINDI:
+हमारी टीम का हिस्सा बनने के लिए, कृपया ataljanseva.in पर जाएं और अभी आवेदन करें।
+
+Thank you for staying connected with the Ataljanseva Citizen Service!!
+
+
+ 
+
+
+		
