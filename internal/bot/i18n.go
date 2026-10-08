@@ -17,6 +17,7 @@ type Strings struct {
 	MenuButton      string // list button label
 	SectionOne      string
 	SectionTwo      string
+	OptMoreOptions  string // "More options" row revealing the rest of the menu
 
 	// Option labels (menu rows)
 	OptRaiseComplaint  string
@@ -143,6 +144,7 @@ Please select your Leader from the list below 👇!!`,
 		MenuButton:      "Select Option",
 		SectionOne:      "Services",
 		SectionTwo:      "More Services",
+		OptMoreOptions:  "More Options (10-13)",
 
 		OptRaiseComplaint:  "Raise Complaint",
 		OptTrackComplaint:  "Track Complaint",
@@ -257,6 +259,7 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		MenuButton:      "पर्याय निवडा",
 		SectionOne:      "सेवा",
 		SectionTwo:      "अधिक सेवा",
+		OptMoreOptions:  "अधिक पर्याय (10-13)",
 
 		OptRaiseComplaint:  "तक्रार नोंदवा",
 		OptTrackComplaint:  "तक्रारीची स्थिती तपासा",
@@ -369,6 +372,7 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		MenuButton:      "विकल्प चुनें",
 		SectionOne:      "सेवाएं",
 		SectionTwo:      "अधिक सेवाएं",
+		OptMoreOptions:  "अधिक विकल्प (10-13)",
 
 		OptRaiseComplaint:  "शिकायत दर्ज करें",
 		OptTrackComplaint:  "शिकायत की स्थिति देखें",

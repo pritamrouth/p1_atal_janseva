@@ -22,8 +22,10 @@ Leader e-Office main menu                     ← leader photo + 13-option list
 ```
 
 - All texts are localised in **English / Marathi / Hindi**.
-- The menu is a WhatsApp list split into two sections (rows 1–10 and 11–13)
-  because Meta allows max 10 rows per section.
+- The menu is ONE WhatsApp list with options **1–9 plus a "More Options
+  (10-13)" row** — Meta caps the **total** row count of a list message at 10
+  (API error `#131009`), not 10 per section. Tapping "More Options" reveals
+  options 10–13 in a second list.
 - Typing `reset` at any point restarts the conversation.
 - Sessions expire silently after 90 s of inactivity; completed sessions
   (PIN + leader) are persisted to `citizen_ivr` via `upsert_citizen_ivr`.

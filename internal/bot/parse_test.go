@@ -149,6 +149,94 @@ func TestMenuRowsCount(t *testing.T) {
 	}
 }
 
+// Meta rejects list messages with more than 10 rows TOTAL (error #131009),
+// so any row set (e.g. a long leader list) must be split into chunks of ≤10.
+func TestChunkRows(t *testing.T) {
+	rows := menuRows(I18n["en"])
+	chunks := chunkRows(rows)
+
+	if len(chunks) != 2 {
+		t.Fatalf("chunks = %d, want 2", len(chunks))
+	}
+	if len(chunks[0]) != 10 {
+		t.Errorf("chunk 0 rows = %d, want 10", len(chunks[0]))
+	}
+	if len(chunks[1]) != 3 {
+		t.Errorf("chunk 1 rows = %d, want 3", len(chunks[1]))
+	}
+
+	// Order and content must be preserved across chunks.
+	var merged [][3]string
+	for _, c := range chunks {
+		merged = append(merged, c...)
+	}
+	if len(merged) != len(rows) {
+		t.Fatalf("merged rows = %d, want %d", len(merged), len(rows))
+	}
+	for i, r := range merged {
+		if r[0] != rows[i][0] {
+			t.Errorf("merged row %d id = %q, want %q", i, r[0], rows[i][0])
+		}
+	}
+
+	// Exactly 10 rows → single chunk; empty → no chunks.
+	if got := chunkRows(rows[:10]); len(got) != 1 {
+		t.Errorf("10 rows produced %d chunks, want 1", len(got))
+	}
+	if got := chunkRows(nil); len(got) != 0 {
+		t.Errorf("nil rows produced %d chunks, want 0", len(got))
+	}
+}
+
+// The main menu shows ONE list (Meta: max 10 rows total): options 1–9
+// plus a "More Options" row; tapping it reveals options 10–13.
+func TestPrimaryAndSecondaryMenuRows(t *testing.T) {
+	for lang := range I18n {
+		s := I18n[lang]
+
+		primary := primaryMenuRows(s)
+		if len(primary) != metaListMaxRows {
+			t.Errorf("[%s] primary rows = %d, want %d", lang, len(primary), metaListMaxRows)
+		}
+		for i := 0; i < 9; i++ {
+			if want := "opt_" + itoa(i+1); primary[i][0] != want {
+				t.Errorf("[%s] primary row %d id = %q, want %q", lang, i, primary[i][0], want)
+			}
+		}
+		if primary[9][0] != "opt_more" {
+			t.Errorf("[%s] last primary row id = %q, want opt_more", lang, primary[9][0])
+		}
+		if primary[9][1] != s.OptMoreOptions {
+			t.Errorf("[%s] more-row title = %q, want %q", lang, primary[9][1], s.OptMoreOptions)
+		}
+
+		secondary := secondaryMenuRows(s)
+		if len(secondary) != 4 {
+			t.Errorf("[%s] secondary rows = %d, want 4", lang, len(secondary))
+		}
+		wantIDs := []string{"opt_10", "opt_11", "opt_12", "opt_13"}
+		for i, r := range secondary {
+			if r[0] != wantIDs[i] {
+				t.Errorf("[%s] secondary row %d id = %q, want %q", lang, i, r[0], wantIDs[i])
+			}
+		}
+
+		// Every menu option must be reachable exactly once.
+		seen := map[string]bool{}
+		for _, r := range primary {
+			seen[r[0]] = true
+		}
+		for _, r := range secondary {
+			seen[r[0]] = true
+		}
+		for _, r := range menuRows(s) {
+			if !seen[r[0]] {
+				t.Errorf("[%s] option %q is unreachable", lang, r[0])
+			}
+		}
+	}
+}
+
 func itoa(n int) string {
 	if n == 10 {
 		return "10"

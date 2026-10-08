@@ -18,7 +18,10 @@ import (
 	"github.com/ataljanseva/janseva-chatbot/internal/whatsapp"
 )
 
-const jobTimeout = 12 * time.Second
+// jobTimeout budgets one inbound message end-to-end. It must comfortably fit
+// a DB lookup + WhatsApp API call (Meta downloads the leader photo itself,
+// which can be slow on first send) + a retry.
+const jobTimeout = 30 * time.Second
 
 // Hero banner used for the language picker and the PIN-code prompt,
 // and the leader profile photo come from the same assets as the original backend.
@@ -248,6 +251,8 @@ func (h *Handler) promptLeader(ctx context.Context, phone string, sess *store.Se
 }
 
 // sendLeaderList renders the WhatsApp list message of leaders for the pincode.
+// Meta caps the TOTAL row count of one list message at 10 (error #131009),
+// so pin codes with more than 10 leaders are split across several messages.
 func (h *Handler) sendLeaderList(ctx context.Context, phone string, sess *store.Session, leaders []db.Nagarsevak) {
 	t := h.t(sess)
 
@@ -257,10 +262,12 @@ func (h *Handler) sendLeaderList(ctx context.Context, phone string, sess *store.
 	}
 
 	bodyText := fmt.Sprintf(t.LeaderPrompt, h.displayPin(sess, sess.Pincode))
-	if err := h.wa.SendList(ctx, phone, bodyText, t.SelectLeader, []whatsapp.ListSection{
-		{Title: t.LeaderSection, Rows: rows},
-	}); err != nil {
-		slog.Error("sendLeaderList", "phone", phone, "err", err)
+	for _, chunk := range chunkRows(rows) {
+		sections := []whatsapp.ListSection{{Title: t.LeaderSection, Rows: chunk}}
+		if err := h.sendListWithRetry(ctx, phone, bodyText, t.SelectLeader, sections); err != nil {
+			slog.Error("sendLeaderList", "phone", phone, "err", err)
+			return
+		}
 	}
 }
 
@@ -309,7 +316,6 @@ func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Se
 			slog.Warn("sendMainMenu: profile photo failed", "phone", phone, "url", ns.ProfilePhoto, "err", err)
 			_ = h.wa.SendText(ctx, phone, heading)
 		}
-		time.Sleep(300 * time.Millisecond)
 	} else {
 		_ = h.wa.SendText(ctx, phone, heading)
 	}
@@ -317,27 +323,79 @@ func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Se
 	h.sendMenuList(ctx, phone, sess)
 }
 
-// sendMenuList sends the 13 options as a WhatsApp list message.
-// WhatsApp allows max 10 rows per section, so the options are split
-// into "1–10" and "11–13".
+// metaListMaxRows is Meta's maximum TOTAL row count for a single list
+// message across all of its sections. Exceeding it fails with API error
+// #131009 "Total row count exceed max allowed count: 10".
+const metaListMaxRows = 10
+
+// sendMenuList sends the main list: options 1–9 plus a "More Options"
+// row (Meta caps one list message at 10 rows TOTAL, and flow.txt has 13
+// options). Tapping "More Options" sends the remaining options 10–13.
+// On failure it retries once with a fresh context (the original ctx may be
+// nearly exhausted after the leader image upload) — losing the menu would
+// strand the user with no way to pick an option.
 func (h *Handler) sendMenuList(ctx context.Context, phone string, sess *store.Session) {
 	t := h.t(sess)
-	rows := menuRows(t)
+	sections := []whatsapp.ListSection{{Title: t.SectionOne, Rows: primaryMenuRows(t)}}
 
-	sections := []whatsapp.ListSection{
-		{Title: t.SectionOne, Rows: rows[:10]},
+	if err := h.sendListWithRetry(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
+		slog.Error("sendMenuList failed", "phone", phone, "err", err)
+		return
 	}
-	if len(rows) > 10 {
-		sections = append(sections, whatsapp.ListSection{Title: t.SectionTwo, Rows: rows[10:]})
-	}
+	slog.Info("menu list sent", "phone", phone, "lang", sess.Lang, "step", sess.Step)
+}
 
-	if err := h.wa.SendList(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
-		slog.Error("sendMenuList", "phone", phone, "err", err)
+// sendMoreOptionsList sends options 10–13, shown after the user taps the
+// "More Options" row of the main menu list.
+func (h *Handler) sendMoreOptionsList(ctx context.Context, phone string, sess *store.Session) {
+	t := h.t(sess)
+	sections := []whatsapp.ListSection{{Title: t.SectionTwo, Rows: secondaryMenuRows(t)}}
+
+	if err := h.sendListWithRetry(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
+		slog.Error("sendMoreOptionsList failed", "phone", phone, "err", err)
+		return
 	}
+	slog.Info("more options list sent", "phone", phone, "lang", sess.Lang)
+}
+
+// sendListWithRetry sends one list message; if the (possibly nearly
+// exhausted) ctx fails, it retries once with a fresh context.
+func (h *Handler) sendListWithRetry(ctx context.Context, phone, body, button string, sections []whatsapp.ListSection) error {
+	if err := h.wa.SendList(ctx, phone, body, button, sections); err != nil {
+		slog.Warn("SendList failed, retrying with fresh context", "phone", phone, "err", err)
+
+		retryCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := h.wa.SendList(retryCtx, phone, body, button, sections); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// chunkRows splits rows into chunks of at most metaListMaxRows,
+// so each chunk can be sent as its own list message.
+func chunkRows(rows [][3]string) [][][3]string {
+	var chunks [][][3]string
+	for start := 0; start < len(rows); start += metaListMaxRows {
+		end := start + metaListMaxRows
+		if end > len(rows) {
+			end = len(rows)
+		}
+		chunks = append(chunks, rows[start:end])
+	}
+	return chunks
 }
 
 func (h *Handler) handleMenuSelection(ctx context.Context, phone string, sess *store.Session, ir *whatsapp.InteractiveReply) {
 	id := listID(ir)
+
+	if id == "opt_more" {
+		// Reveal the remaining options (10–13).
+		h.sendMoreOptionsList(ctx, phone, sess)
+		return
+	}
+
 	if !strings.HasPrefix(id, "opt_") {
 		h.sendMenuList(ctx, phone, sess)
 		return
@@ -626,7 +684,7 @@ func (h *Handler) displayPin(sess *store.Session, pin string) string {
 	return pin
 }
 
-// menuRows builds the 13 main-menu list rows in the session language.
+// menuRows builds the 13 main-menu rows in the session language.
 func menuRows(t Strings) [][3]string {
 	return [][3]string{
 		{"opt_1", t.OptRaiseComplaint, ""},
@@ -643,6 +701,21 @@ func menuRows(t Strings) [][3]string {
 		{"opt_12", t.OptYouth, ""},
 		{"opt_13", t.OptJoinTeam, ""},
 	}
+}
+
+// primaryMenuRows returns what fits in the ONE main list message:
+// options 1–9 plus the "More Options" row (10 rows = Meta's hard limit).
+func primaryMenuRows(t Strings) [][3]string {
+	rows := menuRows(t)
+	primary := make([][3]string, 0, metaListMaxRows)
+	primary = append(primary, rows[:9]...)
+	primary = append(primary, [3]string{"opt_more", t.OptMoreOptions, ""})
+	return primary
+}
+
+// secondaryMenuRows returns the options revealed by "More Options": 10–13.
+func secondaryMenuRows(t Strings) [][3]string {
+	return menuRows(t)[9:]
 }
 
 func buttonID(ir *whatsapp.InteractiveReply) string {
