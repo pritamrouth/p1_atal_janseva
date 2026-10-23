@@ -45,19 +45,24 @@ func (wh *webhookHandler) verify(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /webhook – Meta inbound messages.
-// Meta requires a fast 200 ACK, so we respond before parsing.
+// Meta requires a fast 200 ACK, so we acknowledge before parsing and enqueueing.
 func (wh *webhookHandler) receive(w http.ResponseWriter, r *http.Request) {
+	// Read the body BEFORE writing/flushing the response. If the server flushes
+	// a response while the request body is still unread, net/http drains and
+	// closes the body to keep the connection reusable, causing
+	// "http: invalid Read on closed Body" here.
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error("webhook read body", "err", err)
+	}
+
+	// ACK immediately after the payload has been received, then process.
 	w.WriteHeader(http.StatusOK)
-	// Flush so Meta receives the 200 ACK immediately instead of waiting for
-	// the handler to finish enqueueing. Slow ACKs cause Meta to retry the
-	// delivery, which is another source of duplicate messages.
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
 
-	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		slog.Error("webhook read body", "err", err)
 		return
 	}
 
