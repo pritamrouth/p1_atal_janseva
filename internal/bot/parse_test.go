@@ -113,12 +113,12 @@ func TestNormalizeDate(t *testing.T) {
 
 func TestNormalizeTicket(t *testing.T) {
 	cases := map[string]string{
-		"AJ100001":    "AJ100001",
-		"aj100001":    "AJ100001",
-		" aj 100001 ": "AJ100001",
-		"AJ-100001":   "AJ100001",
-		"100001":      "AJ100001",
-		"":            "",
+		"TKT4821907":    "TKT4821907",
+		"tkt4821907":    "TKT4821907",
+		" tkt 4821907 ": "TKT4821907",
+		"TKT-4821907":   "TKT4821907",
+		"4821907":       "TKT4821907",
+		"":              "",
 	}
 	for in, want := range cases {
 		if got := normalizeTicket(in); got != want {

@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /ataljanseva
 # ── Runtime stage ──────────────────────────────────────────────────────────────
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /ataljanseva-bot /ataljanseva-bot
-# Migrations are applied on startup (complaints / meetings tables).
+# Migrations are applied on startup (drops the retired local tables).
 COPY --from=build /src/migrations /migrations
 ENV MIGRATIONS_DIR=/migrations
 

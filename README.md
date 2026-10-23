@@ -15,13 +15,18 @@ Language picker (Marathi / English / Hindi)   ← hero banner + 3 reply buttons
 Leader list for the PIN code                  ← WhatsApp list ("Select Leader")
         ↓
 Leader e-Office main menu                     ← leader photo + 13-option list
-        ├── 1  Raise complaint      → free-text details → Ticket ID
-        ├── 2  Track complaint      → Ticket ID → in progress / resolved / invalid
-        ├── 3  Schedule meeting     → name/date/reason → time slot → confirmation
-        └── 4–13 Info replies       → localised text + closing note, menu re-shown
+        ├── 1  Raise complaint      → free-text details → POST /api/grievances → Ticket ID
+        ├── 2  Track complaint      → Ticket ID → GET track/ticket → in progress / resolved / invalid
+        ├── 3  Schedule meeting     → name/date/reason → free slots → POST book → confirmation
+        ├── 4–9, 12 Info replies    → live AtalJanseva API listings, static text as fallback
+        └── 10, 11, 13 Info replies → localised text + closing note, menu re-shown
 ```
 
 - All texts are localised in **English / Marathi / Hindi**.
+- Complaints, tracking, appointments and the info listings come from the
+  public **AtalJanseva REST API** (`ATALJANSEVA_API_BASE_URL`, no auth).
+  When the API fails or returns nothing, options 4–9 and 12 fall back to
+  the static `flow.txt` text.
 - The menu is ONE WhatsApp list with options **1–9 plus a "More Options
   (10-13)" row** — Meta caps the **total** row count of a list message at 10
   (API error `#131009`), not 10 per section. Tapping "More Options" reveals
@@ -71,6 +76,8 @@ same `.env` works (Plivo variables are simply ignored):
 | `REDIS_ADDR` / `REDIS_PASSWORD` / `REDIS_DB` | `localhost:6379` / "" / 0 | session store |
 | `WORKER_COUNT` / `QUEUE_DEPTH` | 50 / 2000 | inbound message pool |
 | `ENABLE_INACTIVITY_MONITOR` | `true` | 90 s idle session expiry |
+| `ATALJANSEVA_API_BASE_URL` | `https://api.ataljanseva.in` | AtalJanseva REST API (local: `http://localhost:3000`) |
+| `ATALJANSEVA_API_TIMEOUT` | 10 | per-request API timeout (seconds) |
 | `PORT` / `ENV` | 8080 / development | HTTP server / JSON logs in production |
 | `MIGRATIONS_DIR` | `migrations` | where `*.sql` migrations live |
 
@@ -82,23 +89,33 @@ same `.env` works (Plivo variables are simply ignored):
 - `get_nagarsevak_by_id(TEXT)` – single leader
 - `upsert_citizen_ivr(phone, lang, pincode, ward, nagarsevak_id)` – citizen persistence
 
-**Created by this service** (applied automatically at startup,
-`migrations/001_complaints_and_meetings.sql`, tracked in `schema_migrations`):
+**Migrations** (applied automatically at startup, tracked in
+`schema_migrations`): `migrations/002_drop_complaints_and_meetings.sql` drops
+the retired local `complaints` / `meetings` tables — that data now lives in
+the AtalJanseva API.
 
-- `complaints` – `ticket_id` (AJ100001…), `phone`, `lang`, `full_name`,
-  `description`, `address`, `leader_id`, `pincode`, `status`, timestamps
-- `meetings` – `phone`, `lang`, `full_name`, `preferred_date`, `reason`,
-  `slot`, `leader_id`, `pincode`, `created_at`
-- `complaint_ticket_seq` – sequence generating the ticket IDs
+## AtalJanseva API
 
-### Marking a complaint resolved
+Grievances, tracking, appointments and info listings (menu options 1–9, 12)
+call the public REST API documented in `data/api.txt`:
 
-```sql
-UPDATE complaints SET status = 'resolved', updated_at = NOW()
-WHERE ticket_id = 'AJ100001';
-```
+| Menu option | Endpoint |
+|---|---|
+| 1 Raise complaint | `POST /api/grievances` → ticketId (`TKT…`) |
+| 2 Track complaint | `GET /api/grievances/track/ticket/{ticketId}` |
+| 3 Schedule meeting | `GET /api/schedule/appointments/slots` → free slots, then `POST /api/schedule/appointments/book` |
+| 4 About leader | `GET /api/political-users/slug/{slug}` |
+| 5 Transparency board | `GET /api/grievances/public/all?status=Resolved` |
+| 6 Work reports | `GET /api/work-reports/public` |
+| 7 Events | `GET /api/events/public` |
+| 8 Schemes | `GET /api/programs/public` |
+| 9 JanSeva Connect | `GET /api/local-services/public` |
+| 12 Youth campaigns | `GET /api/campaigns/public` |
 
-Anything other than `resolved` is reported as “in progress”.
+Options 10 (NariShakti), 11 (Swadeshi) and 13 (Join Our Team) have no
+matching endpoint and send static localised text. Listing responses are
+parsed defensively (up to 5 items); on any API error the static `flow.txt`
+text is sent instead.
 
 ## Endpoints
 
@@ -122,4 +139,4 @@ docker run -d --env-file .env -p 8080:8080 --name ataljanseva-chatbot ataljansev
 ```
 
 The image copies `migrations/` to `/migrations` and sets `MIGRATIONS_DIR`,
-so table creation works inside the container.
+so migrations run inside the container.

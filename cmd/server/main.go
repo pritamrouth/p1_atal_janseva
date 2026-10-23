@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ataljanseva/janseva-chatbot/config"
+	"github.com/ataljanseva/janseva-chatbot/internal/api"
 	"github.com/ataljanseva/janseva-chatbot/internal/bot"
 	"github.com/ataljanseva/janseva-chatbot/internal/db"
 	"github.com/ataljanseva/janseva-chatbot/internal/inactivity"
@@ -77,7 +78,7 @@ func main() {
 	defer repo.Close()
 	slog.Info("database connected")
 
-	// ── Migrations (complaints / meetings tables) ─────────────────────────────
+	// ── Migrations (drops the retired local complaints/meetings tables) ──────
 	migrationsDir := os.Getenv("MIGRATIONS_DIR")
 	if migrationsDir == "" {
 		migrationsDir = "migrations"
@@ -86,6 +87,16 @@ func main() {
 		slog.Error("migrations", "err", err)
 		os.Exit(1)
 	}
+
+	// ── AtalJanseva public REST API (grievances / appointments / listings) ───
+	ajClient := api.NewClient(
+		cfg.AtalJansevaAPIBaseURL,
+		time.Duration(cfg.AtalJansevaAPITimeout)*time.Second,
+	)
+	slog.Info("ataljanseva api configured",
+		"base_url", cfg.AtalJansevaAPIBaseURL,
+		"timeout_s", cfg.AtalJansevaAPITimeout,
+	)
 
 	// ── WhatsApp client (Meta Cloud API) ──────────────────────────────────────
 	messenger := whatsapp.NewMetaClient(cfg.WAPhoneNumberID, cfg.WAAccessToken)
@@ -149,13 +160,13 @@ func main() {
 			"action", "session_cleanup_and_ivr_upsert",
 		)
 		// Bot + Worker pool
-		runServer(ctx, cfg, messenger, sessionStore, repo, inactiveMonitor)
+		runServer(ctx, cfg, messenger, sessionStore, repo, inactiveMonitor, ajClient)
 		return
 	}
 
 	slog.Info("inactivity monitor disabled")
 	skipMonitor := inactivity.New(rdb, func(context.Context, string, inactivity.SessionSnapshot) {})
-	runServer(ctx, cfg, messenger, sessionStore, repo, skipMonitor)
+	runServer(ctx, cfg, messenger, sessionStore, repo, skipMonitor, ajClient)
 }
 
 // runServer wires the bot, worker pool and HTTP server.
@@ -166,8 +177,9 @@ func runServer(
 	sessionStore *store.Store,
 	repo *db.Repo,
 	inactiveMonitor *inactivity.Monitor,
+	ajClient *api.Client,
 ) {
-	botHandler := bot.New(messenger, sessionStore, repo, inactiveMonitor)
+	botHandler := bot.New(messenger, sessionStore, repo, inactiveMonitor, ajClient)
 
 	pool := worker.New(cfg.WorkerCount, cfg.QueueDepth, botHandler.HandleRaw)
 	pool.Start()

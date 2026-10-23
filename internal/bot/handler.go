@@ -1,6 +1,8 @@
 // Package bot implements the Ataljanseva citizen service conversation flow:
 // language → PIN code → leader selection → 13-option main menu → sub-flows
 // (raise complaint, track complaint, schedule meeting, information replies).
+// Complaints, tracking, appointments and info listings call the public
+// AtalJanseva REST API (internal/api); leaders come from PostgreSQL.
 // All operations are context-aware for proper timeout/cancellation propagation.
 package bot
 
@@ -9,9 +11,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ataljanseva/janseva-chatbot/internal/api"
 	"github.com/ataljanseva/janseva-chatbot/internal/db"
 	"github.com/ataljanseva/janseva-chatbot/internal/inactivity"
 	"github.com/ataljanseva/janseva-chatbot/internal/store"
@@ -19,21 +24,22 @@ import (
 )
 
 // jobTimeout budgets one inbound message end-to-end. It must comfortably fit
-// a DB lookup + WhatsApp API call (Meta downloads the leader photo itself,
-// which can be slow on first send) + a retry.
+// a DB lookup + an AtalJanseva API call + WhatsApp API call (Meta downloads
+// the leader photo itself, which can be slow on first send) + a retry.
 const jobTimeout = 30 * time.Second
 
 // Hero banner used for the language picker and the PIN-code prompt,
 // and the leader profile photo come from the same assets as the original backend.
 const heroBannerURL = "https://res.cloudinary.com/dkgfw2zf0/image/upload/v1781075980/8005beb1-ec05-401f-b514-19f1e00f00ab_de87md.png"
 
-// meetingSlots are the fixed appointment time slots offered after the
-// meeting details have been captured.
-var meetingSlots = [][2]string{ // {id, label}
-	{"slot_1000", "10:00 AM"},
-	{"slot_1200", "12:00 PM"},
-	{"slot_1500", "3:00 PM"},
-	{"slot_1700", "5:00 PM"},
+// meetingSlots are the fixed candidate slots offered after the meeting
+// details have been captured: {row id, label, 24h time}. Booked ones are
+// filtered out against GET /api/schedule/appointments/slots.
+var meetingSlots = [][3]string{
+	{"slot_1000", "10:00 AM", "10:00"},
+	{"slot_1200", "12:00 PM", "12:00"},
+	{"slot_1500", "3:00 PM", "15:00"},
+	{"slot_1700", "5:00 PM", "17:00"},
 }
 
 // Handler processes inbound WhatsApp messages.
@@ -42,10 +48,11 @@ type Handler struct {
 	store    *store.Store
 	repo     *db.Repo
 	inactive *inactivity.Monitor
+	api      *api.Client
 }
 
-func New(wa whatsapp.Messenger, s *store.Store, repo *db.Repo, inactive *inactivity.Monitor) *Handler {
-	return &Handler{wa: wa, store: s, repo: repo, inactive: inactive}
+func New(wa whatsapp.Messenger, s *store.Store, repo *db.Repo, inactive *inactivity.Monitor, apiClient *api.Client) *Handler {
+	return &Handler{wa: wa, store: s, repo: repo, inactive: inactive, api: apiClient}
 }
 
 // HandleRaw is the worker entry-point: one call per inbound message.
@@ -438,7 +445,15 @@ func (h *Handler) dispatchOption(ctx context.Context, phone string, sess *store.
 		}
 		_ = h.wa.SendText(ctx, phone, t.MeetingPrompt)
 
-	case 4, 5, 6, 7, 8, 9, 10, 11, 12, 13:
+	case 4, 5, 6, 7, 8, 9, 12:
+		// API-backed information (About leader, Transparency Board, Work
+		// Reports, Events, Schemes, JanSeva Connect, Youth Campaigns).
+		h.sendDynamicOption(ctx, phone, sess, n)
+		h.sendMenuList(ctx, phone, sess)
+
+	case 10, 11, 13:
+		// No matching API endpoint (NariShakti, Swadeshi, Join Our Team) —
+		// static localised text.
 		h.sendInfoReply(ctx, phone, sess, n)
 		h.sendMenuList(ctx, phone, sess)
 
@@ -483,6 +498,107 @@ func (h *Handler) sendInfoReply(ctx context.Context, phone string, sess *store.S
 }
 
 // ─────────────────────────────────────────────
+// API-backed info options (4–9, 12)
+// ─────────────────────────────────────────────
+
+// sendDynamicOption sends the API-backed content for one menu option,
+// falling back to the static localised text when the API fails, returns
+// nothing, or the option has no endpoint.
+func (h *Handler) sendDynamicOption(ctx context.Context, phone string, sess *store.Session, n int) {
+	t := h.t(sess)
+
+	text, photo, err := h.dynamicOption(ctx, sess, n)
+	if err != nil {
+		slog.Warn("dynamic option: falling back to static text",
+			"option", n, "phone", phone, "err", err)
+		h.sendInfoReply(ctx, phone, sess, n)
+		return
+	}
+
+	msg := text + "\n\n" + t.ThankYou
+	if photo != "" {
+		if err := h.wa.SendImage(ctx, phone, photo, msg); err != nil {
+			slog.Warn("dynamic option: image failed", "option", n, "err", err)
+			_ = h.wa.SendText(ctx, phone, msg)
+		}
+		return
+	}
+	_ = h.wa.SendText(ctx, phone, msg)
+}
+
+// dynamicOption fetches and formats the API content for one menu option.
+// The returned photo ("", when none) is sent as an image caption if set.
+func (h *Handler) dynamicOption(ctx context.Context, sess *store.Session, n int) (text, photo string, err error) {
+	t := h.t(sess)
+	slug := sess.NagarsevakSlug
+
+	switch n {
+	case 4: // About leader
+		prof, ferr := h.api.ProfileBySlug(ctx, slug)
+		if ferr != nil {
+			return "", "", ferr
+		}
+		leader := h.leaderDisplayName(ctx, sess)
+		text, photo = formatProfile(prof, leader)
+		return text + "\n\n" + fmt.Sprintf(t.AboutLeaderText, leader), photo, nil
+
+	case 5: // Transparency Board – resolved grievances of this office
+		return h.listOption(ctx, sess, t.TransparencyHeader, "/api/grievances/public/all",
+			url.Values{
+				"nagarsevakId": {slug},
+				"status":       {"Resolved"},
+				"limit":        {strconv.Itoa(maxInfoItems)},
+			}, formatGrievance)
+
+	case 6:
+		return h.listOption(ctx, sess, t.WorkReportsHeader, "/api/work-reports/public",
+			limitQuery(), formatInfoItem)
+
+	case 7:
+		return h.listOption(ctx, sess, t.EventsHeader, "/api/events/public",
+			limitQuery(), formatInfoItem)
+
+	case 8:
+		return h.listOption(ctx, sess, t.SchemesHeader, "/api/programs/public",
+			limitQuery(), formatInfoItem)
+
+	case 9:
+		return h.listOption(ctx, sess, t.JanSevaHeader, "/api/local-services/public",
+			limitQuery(), formatInfoItem)
+
+	case 12:
+		return h.listOption(ctx, sess, t.YouthHeader, "/api/campaigns/public",
+			limitQuery(), formatInfoItem)
+	}
+	return "", "", fmt.Errorf("option %d has no API-backed content", n)
+}
+
+func limitQuery() url.Values {
+	return url.Values{"limit": {strconv.Itoa(maxInfoItems)}}
+}
+
+// listOption fetches a listing endpoint and formats it as one message:
+// header, up to maxInfoItems numbered items and the "visit ataljanseva.in"
+// footer. An empty listing returns errNoItems so the caller can fall back.
+func (h *Handler) listOption(
+	ctx context.Context,
+	sess *store.Session,
+	header, path string,
+	q url.Values,
+	line func(api.Item) string,
+) (text, photo string, err error) {
+	items, ferr := h.api.PublicList(ctx, path, q)
+	if ferr != nil {
+		return "", "", ferr
+	}
+	lines := numbered(items, maxInfoItems, line)
+	if len(lines) == 0 {
+		return "", "", errNoItems
+	}
+	return listMessage(header, lines, h.t(sess).InfoMoreLink), "", nil
+}
+
+// ─────────────────────────────────────────────
 // Option 1 – raise complaint
 // ─────────────────────────────────────────────
 
@@ -499,22 +615,26 @@ func (h *Handler) handleComplaintDetails(ctx context.Context, phone string, sess
 		return
 	}
 
-	ticketID, err := h.repo.CreateComplaint(ctx, &db.Complaint{
-		Phone:       phone,
-		Lang:        sess.Lang,
-		FullName:    details["name"],
-		Description: details["description"],
-		Address:     details["address"],
-		LeaderID:    sess.NagarsevakID,
-		Pincode:     sess.Pincode,
+	g, err := h.api.CreateGrievance(ctx, api.GrievanceRequest{
+		NagarsevakID: sess.NagarsevakSlug,
+		Name:         details["name"],
+		Mobile:       api.Mobile10(phone),
+		Description:  details["description"],
+		Address:      details["address"],
+		Ward:         sess.NagarsevakWard,
 	})
 	if err != nil {
-		slog.Error("CreateComplaint", "phone", phone, "err", err)
-		_ = h.wa.SendText(ctx, phone, t.InvalidDetails+"\n\n"+t.ComplaintPrompt)
+		slog.Error("CreateGrievance", "phone", phone, "err", err)
+		_ = h.wa.SendText(ctx, phone, t.ComplaintFailed+"\n\n"+t.ComplaintPrompt)
+		return
+	}
+	if g.TicketID == "" {
+		slog.Error("CreateGrievance: empty ticket ID", "phone", phone)
+		_ = h.wa.SendText(ctx, phone, t.ComplaintFailed+"\n\n"+t.ComplaintPrompt)
 		return
 	}
 
-	_ = h.wa.SendText(ctx, phone, fmt.Sprintf(t.ComplaintSuccess, ticketID))
+	_ = h.wa.SendText(ctx, phone, fmt.Sprintf(t.ComplaintSuccess, g.TicketID))
 	h.returnToMenu(ctx, phone, sess)
 }
 
@@ -531,18 +651,23 @@ func (h *Handler) handleTrackTicket(ctx context.Context, phone string, sess *sto
 		return
 	}
 
-	status, err := h.repo.GetComplaintStatus(ctx, ticketID)
-	if err == sql.ErrNoRows {
-		_ = h.wa.SendText(ctx, phone, t.TrackInvalid)
-		return
-	}
+	g, err := h.api.TrackTicket(ctx, ticketID)
 	if err != nil {
-		slog.Error("GetComplaintStatus", "ticket_id", ticketID, "err", err)
-		_ = h.wa.SendText(ctx, phone, t.TrackInvalid)
+		if api.IsNotFound(err) {
+			_ = h.wa.SendText(ctx, phone, t.TrackInvalid)
+			return
+		}
+		slog.Error("TrackTicket", "ticket_id", ticketID, "err", err)
+		_ = h.wa.SendText(ctx, phone, t.TrackFailed)
 		return
 	}
 
-	if status == "resolved" {
+	// The API reports "Pending" / "In Progress" / "Resolved"; flow.txt has
+	// only two messages, so everything short of Resolved is "in progress".
+	if g.TicketID != "" {
+		ticketID = g.TicketID
+	}
+	if strings.EqualFold(strings.TrimSpace(g.Status), "resolved") {
 		_ = h.wa.SendText(ctx, phone, fmt.Sprintf(t.TrackResolved, ticketID))
 	} else {
 		_ = h.wa.SendText(ctx, phone, fmt.Sprintf(t.TrackInProgress, ticketID))
@@ -564,8 +689,15 @@ func (h *Handler) handleMeetingDetails(ctx context.Context, phone string, sess *
 	}
 
 	dateISO, ok := normalizeDate(details["date"])
-	if !ok {
+	if !ok || isPastDate(dateISO) {
 		_ = h.wa.SendText(ctx, phone, t.InvalidDetails+"\n\n"+t.MeetingPrompt)
+		return
+	}
+
+	// Only offer slots the office still has free for this date.
+	slots := h.availableSlots(ctx, sess, dateISO)
+	if len(slots) == 0 {
+		_ = h.wa.SendText(ctx, phone, t.MeetingNoSlots+"\n\n"+t.MeetingPrompt)
 		return
 	}
 
@@ -578,57 +710,134 @@ func (h *Handler) handleMeetingDetails(ctx context.Context, phone string, sess *
 		return
 	}
 
-	h.sendSlotList(ctx, phone, sess)
+	h.renderSlotList(ctx, phone, sess, slots)
+}
+
+// availableSlots returns the candidate slots still free on dateISO.
+// When the slots lookup fails the fixed candidates are offered anyway —
+// a conflict then surfaces at booking time and re-opens the list.
+func (h *Handler) availableSlots(ctx context.Context, sess *store.Session, dateISO string) [][3]string {
+	booked, err := h.api.BookedSlots(ctx, sess.NagarsevakSlug, dateISO)
+	if err != nil {
+		slog.Warn("BookedSlots", "slug", sess.NagarsevakSlug, "date", dateISO, "err", err)
+		booked = nil
+	}
+	return freeMeetingSlots(booked)
+}
+
+// freeMeetingSlots filters the fixed candidates against the booked set.
+func freeMeetingSlots(booked map[string]bool) [][3]string {
+	out := make([][3]string, 0, len(meetingSlots))
+	for _, s := range meetingSlots {
+		if !booked[s[2]] {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// slotByID returns the candidate slot with the given row id, or nil.
+func slotByID(id string) *[3]string {
+	for i := range meetingSlots {
+		if meetingSlots[i][0] == id {
+			return &meetingSlots[i]
+		}
+	}
+	return nil
+}
+
+// isPastDate reports whether the ISO date is before today (the API rejects
+// past dates).
+func isPastDate(iso string) bool {
+	t, err := time.Parse("2006-01-02", iso)
+	if err != nil {
+		return true
+	}
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	return t.Before(today)
 }
 
 func (h *Handler) sendSlotList(ctx context.Context, phone string, sess *store.Session) {
 	t := h.t(sess)
 
-	rows := make([][3]string, 0, len(meetingSlots))
-	for _, s := range meetingSlots {
+	// The draft expired (or was never stored) — restart the meeting flow.
+	if sess.PendingDate == "" {
+		sess.Step = store.StepMeeting
+		if err := h.store.Save(ctx, sess); err != nil {
+			slog.Error("save session", "phone", phone, "err", err)
+		}
+		_ = h.wa.SendText(ctx, phone, t.MeetingPrompt)
+		return
+	}
+
+	slots := h.availableSlots(ctx, sess, sess.PendingDate)
+	if len(slots) == 0 {
+		_ = h.wa.SendText(ctx, phone, t.MeetingNoSlots+"\n\n"+t.MeetingPrompt)
+		sess.Step = store.StepMeeting
+		if err := h.store.Save(ctx, sess); err != nil {
+			slog.Error("save session", "phone", phone, "err", err)
+		}
+		return
+	}
+	h.renderSlotList(ctx, phone, sess, slots)
+}
+
+func (h *Handler) renderSlotList(ctx context.Context, phone string, sess *store.Session, slots [][3]string) {
+	t := h.t(sess)
+
+	rows := make([][3]string, 0, len(slots))
+	for _, s := range slots {
 		rows = append(rows, [3]string{s[0], s[1], ""})
 	}
 
-	if err := h.wa.SendList(ctx, phone, t.MeetingSlots, t.SlotsButton, []whatsapp.ListSection{
+	if err := h.sendListWithRetry(ctx, phone, t.MeetingSlots, t.SlotsButton, []whatsapp.ListSection{
 		{Title: t.SlotsSection, Rows: rows},
 	}); err != nil {
-		slog.Error("sendSlotList", "phone", phone, "err", err)
+		slog.Error("renderSlotList", "phone", phone, "err", err)
 	}
 }
 
 func (h *Handler) handleMeetingSlot(ctx context.Context, phone string, sess *store.Session, ir *whatsapp.InteractiveReply) {
 	t := h.t(sess)
 
-	id := listID(ir)
-	var slotLabel string
-	for _, s := range meetingSlots {
-		if s[0] == id {
-			slotLabel = s[1]
-			break
-		}
-	}
-	if slotLabel == "" {
+	slot := slotByID(listID(ir))
+	if slot == nil {
 		h.sendSlotList(ctx, phone, sess)
 		return
 	}
 
-	err := h.repo.CreateMeeting(ctx, &db.Meeting{
-		Phone:         phone,
-		Lang:          sess.Lang,
-		FullName:      sess.PendingName,
-		PreferredDate: sess.PendingDate,
-		Reason:        sess.PendingReason,
-		Slot:          slotLabel,
-		LeaderID:      sess.NagarsevakID,
-		Pincode:       sess.Pincode,
+	appt, err := h.api.BookAppointment(ctx, api.BookRequest{
+		NagarsevakID: sess.NagarsevakSlug,
+		Name:         sess.PendingName,
+		Phone:        api.Mobile10(phone),
+		Date:         sess.PendingDate,
+		Time:         slot[2],
+		Reason:       sess.PendingReason,
 	})
-	if err != nil {
-		slog.Error("CreateMeeting", "phone", phone, "err", err)
-		_ = h.wa.SendText(ctx, phone, t.InvalidDetails+"\n\n"+t.MeetingSlots)
+
+	switch {
+	case api.IsSlotTaken(err):
+		// Someone else took the slot — re-fetch and offer what's left.
+		_ = h.wa.SendText(ctx, phone, t.MeetingSlotTaken)
+		h.sendSlotList(ctx, phone, sess)
+		return
+	case err != nil:
+		slog.Error("BookAppointment", "phone", phone, "date", sess.PendingDate, "time", slot[2], "err", err)
+		_ = h.wa.SendText(ctx, phone, t.MeetingFailed)
 		h.sendSlotList(ctx, phone, sess)
 		return
 	}
 
+	// The API sends no confirmation message itself — the bot sends its own.
+	slog.Info("appointment booked",
+		"phone", phone,
+		"name", sess.PendingName,
+		"date", appt.Date,
+		"time", appt.Time,
+		"end", appt.EndTime,
+		"id", appt.ID,
+	)
 	_ = h.wa.SendText(ctx, phone, t.MeetingSuccess)
 	h.returnToMenu(ctx, phone, sess)
 }

@@ -243,8 +243,9 @@ func normalizeDate(s string) (string, bool) {
 	return "", false
 }
 
-// normalizeTicket turns user input into a canonical ticket ID:
-// uppercase, no spaces/dashes, digits-only input gets the "AJ" prefix.
+// normalizeTicket turns user input into a canonical ticket ID: uppercase,
+// no spaces/dashes; digits-only input gets the API's "TKT" prefix
+// (e.g. "4821907" → "TKT4821907"). The API matches IDs case-insensitively.
 func normalizeTicket(raw string) string {
 	var b strings.Builder
 	for _, r := range strings.ToUpper(strings.TrimSpace(raw)) {
@@ -265,7 +266,7 @@ func normalizeTicket(raw string) string {
 		}
 	}
 	if allDigits {
-		return "AJ" + t
+		return "TKT" + t
 	}
 	return t
 }

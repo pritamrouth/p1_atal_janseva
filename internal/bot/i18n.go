@@ -46,11 +46,18 @@ type Strings struct {
 	TrackInvalid    string
 
 	// Meeting sub-flow
-	MeetingPrompt  string
-	MeetingSlots   string
-	MeetingSuccess string
-	SlotsButton    string // list button label
-	SlotsSection   string // list section title
+	MeetingPrompt    string
+	MeetingSlots     string
+	MeetingSuccess   string
+	MeetingNoSlots   string
+	MeetingSlotTaken string
+	MeetingFailed    string
+	SlotsButton      string // list button label
+	SlotsSection     string // list section title
+
+	// API failures (complaint / track flows)
+	ComplaintFailed string
+	TrackFailed     string
 
 	// Info replies (options 4–13)
 	AboutLeaderText  string // %[1]s = leader name
@@ -64,6 +71,15 @@ type Strings struct {
 	YouthText        string
 	JoinTeamText     string
 	ThankYou         string
+	InfoMoreLink     string // footer appended to API-backed listings
+
+	// Headers for API-backed listings (options 4–9, 12)
+	TransparencyHeader string
+	WorkReportsHeader  string
+	EventsHeader       string
+	SchemesHeader      string
+	JanSevaHeader      string
+	YouthHeader        string
 
 	// Generic labels
 	LabelEnglish string
@@ -179,6 +195,9 @@ Please try again in the format below 👇`,
 Your Ticket ID is: *%s*
 You can use this ID to track your complaint status. Thank you!`,
 
+		ComplaintFailed: `Sorry, we couldn't submit your complaint right now.
+Please try again in a moment.`,
+
 		TrackPrompt: `To track your complaint, please enter your Ticket ID:`,
 		TrackInProgress: `Ticket ID: *%s*
 
@@ -188,6 +207,8 @@ Your complaint is in progress.`,
 Your complaint has been resolved.`,
 		TrackInvalid: `Invalid Ticket ID.
 Please check and enter the correct Ticket ID.`,
+		TrackFailed: `We couldn't fetch your complaint status right now.
+Please try again later.`,
 
 		MeetingPrompt: `To schedule a meeting, please share your details in this format:
 
@@ -197,8 +218,13 @@ Reason for Appointment:`,
 
 		MeetingSlots:   `Please choose from the available slots:`,
 		MeetingSuccess: `Your appointment has been scheduled successfully.`,
-		SlotsButton:    "Select Slot",
-		SlotsSection:   "Available Slots",
+		MeetingNoSlots: `All slots for this date are already booked. Please choose another date.`,
+		MeetingSlotTaken: `That time slot was just booked by someone else.
+Please choose another available time.`,
+		MeetingFailed: `Sorry, we couldn't book your appointment right now.
+Please try again in a moment.`,
+		SlotsButton:  "Select Slot",
+		SlotsSection: "Available Slots",
 
 		AboutLeaderText: `To know more details about %s, please visit: ataljanseva.in`,
 
@@ -226,6 +252,15 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		JoinTeamText: `To become a part of our team, please visit ataljanseva.in and apply now.`,
 
 		ThankYou: `Thank you for staying connected with the *Ataljanseva Citizen Service*!!`,
+
+		InfoMoreLink: `For more details, please visit: ataljanseva.in`,
+
+		TransparencyHeader: `Recent resolved grievances:`,
+		WorkReportsHeader:  `Latest work reports:`,
+		EventsHeader:       `Upcoming events & meetings:`,
+		SchemesHeader:      `Government schemes & services:`,
+		JanSevaHeader:      `Local services near you:`,
+		YouthHeader:        `Latest social campaigns:`,
 
 		LabelEnglish: "English",
 		LabelMarathi: "मराठी",
@@ -293,6 +328,9 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 आपला तिकीट ID आहे: *%s*
 आपण या ID द्वारे आपल्या तक्रारीची स्थिती तपासू शकता। धन्यवाद!`,
 
+		ComplaintFailed: `क्षमस्व, आपली तक्रार आत्ता सादर करता आली नाही.
+कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
+
 		TrackPrompt: `आपल्या तक्रारीचा मागोवा घेण्यासाठी, कृपया आपला तिकीट ID टाका:`,
 		TrackInProgress: `तिकीट ID: *%s*
 
@@ -302,6 +340,8 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 आपल्या तक्रारीचे निराकरण झाले आहे.`,
 		TrackInvalid: `अवैध तिकीट ID
 कृपया योग्य तिकीट ID तपासून पुन्हा टाका`,
+		TrackFailed: `आपल्या तक्रारीची स्थिती आत्ता मिळवता आली नाही.
+कृपया नंतर पुन्हा प्रयत्न करा.`,
 
 		MeetingPrompt: `भेट निश्चित करण्यासाठी, कृपया आपली माहिती या स्वरूपात शेअर करा:
 पूर्ण नाव:
@@ -310,8 +350,13 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 
 		MeetingSlots:   `कृपया उपलब्ध वेळांमधून निवडा:`,
 		MeetingSuccess: `आपली भेट यशस्वीरित्या निश्चित करण्यात आली आहे.`,
-		SlotsButton:    "वेळ निवडा",
-		SlotsSection:   "उपलब्ध वेळा",
+		MeetingNoSlots: `या तारखेच्या सर्व वेळा भरून गेल्या आहेत. कृपया दुसरी तारीख निवडा.`,
+		MeetingSlotTaken: `ही वेळ आधीच भरली आहे.
+कृपया उपलब्ध दुसरी वेळ निवडा.`,
+		MeetingFailed: `क्षमस्व, आपली भेट आत्ता निश्चित करता आली नाही.
+कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
+		SlotsButton:  "वेळ निवडा",
+		SlotsSection: "उपलब्ध वेळा",
 
 		AboutLeaderText: `%s यांच्याबद्दल अधिक माहितीसाठी, कृपया भेट द्या: ataljanseva.in`,
 
@@ -339,6 +384,15 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		JoinTeamText: `आमच्या टीमचा भाग होण्यासाठी, कृपया ataljanseva.in ला भेट द्या आणि आत्ताच अर्ज करा.`,
 
 		ThankYou: `*अटलजनसेवा नागरिक सेवेशी* जोडलेले राहिल्याबद्दल धन्यवाद !!`,
+
+		InfoMoreLink: `अधिक माहितीसाठी, कृपया भेट द्या: ataljanseva.in`,
+
+		TransparencyHeader: `निराकरण झालेल्या तक्रारी:`,
+		WorkReportsHeader:  `नवीनतम कामाचे अहवाल:`,
+		EventsHeader:       `आगामी कार्यक्रम आणि बैठका:`,
+		SchemesHeader:      `सरकारी योजना आणि सेवा:`,
+		JanSevaHeader:      `जवळच्या स्थानिक सेवा:`,
+		YouthHeader:        `नवीनतम सामाजिक मोहिमा:`,
 
 		LabelEnglish: "English",
 		LabelMarathi: "मराठी",
@@ -406,6 +460,9 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 आपका टिकट ID है: *%s*
 आप इस ID से अपनी शिकायत की स्थिति देख सकते हैं। धन्यवाद!`,
 
+		ComplaintFailed: `क्षमा करें, आपकी शिकायत अभी दर्ज नहीं हो सकी।
+कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
+
 		TrackPrompt: `अपनी शिकायत को ट्रैक करने के लिए, कृपया अपना टिकट ID दर्ज करें:`,
 		TrackInProgress: `टिकट ID: *%s*
 
@@ -415,6 +472,8 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 आपकी शिकायत का समाधान हो गया है।`,
 		TrackInvalid: `अमान्य टिकट ID।
 कृपया सही टिकट ID जाँच कर दर्ज करें।`,
+		TrackFailed: `हम अभी आपकी शिकायत की स्थिति प्राप्त नहीं कर सके।
+कृपया बाद में पुनः प्रयास करें।`,
 
 		MeetingPrompt: `मीटिंग तय करने के लिए, कृपया अपनी जानकारी इस फॉर्मेट में साझा करें:
 पूरा नाम:
@@ -423,8 +482,13 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 
 		MeetingSlots:   `कृपया उपलब्ध समय में से चुनें:`,
 		MeetingSuccess: `आपकी अपॉइंटमेंट सफलतापूर्वक तय कर दी गई है।`,
-		SlotsButton:    "समय चुनें",
-		SlotsSection:   "उपलब्ध समय",
+		MeetingNoSlots: `इस तारीख के सभी समय भर चुके हैं। कृपया कोई दूसरी तारीख चुनें।`,
+		MeetingSlotTaken: `यह समय पहले ही भर चुका है।
+कृपया कोई उपलब्ध दूसरा समय चुनें।`,
+		MeetingFailed: `क्षमा करें, आपकी अपॉइंटमेंट अभी तय नहीं हो सकी।
+कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
+		SlotsButton:  "समय चुनें",
+		SlotsSection: "उपलब्ध समय",
 
 		AboutLeaderText: `%s के बारे में अधिक जानकारी के लिए, कृपया देखें: ataljanseva.in`,
 
@@ -452,6 +516,15 @@ ataljanseva.in पर Made-in-India उत्पाद खरीदें और
 		JoinTeamText: `हमारी टीम का हिस्सा बनने के लिए, कृपया ataljanseva.in पर जाएं और अभी आवेदन करें।`,
 
 		ThankYou: `अटलजनसेवा नागरिक सेवा से जुड़े रहने के लिए धन्यवाद !!`,
+
+		InfoMoreLink: `अधिक जानकारी के लिए, कृपया देखें: ataljanseva.in`,
+
+		TransparencyHeader: `हल की गई शिकायतें:`,
+		WorkReportsHeader:  `नवीनतम कार्य रिपोर्ट:`,
+		EventsHeader:       `आगामी कार्यक्रम और बैठकें:`,
+		SchemesHeader:      `सरकारी योजनाएं और सेवाएं:`,
+		JanSevaHeader:      `आपके पास की स्थानीय सेवाएं:`,
+		YouthHeader:        `नवीनतम सामाजिक अभियान:`,
 
 		LabelEnglish: "English",
 		LabelMarathi: "मराठी",

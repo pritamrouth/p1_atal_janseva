@@ -33,6 +33,10 @@ type Config struct {
 	// (no message sent). User starts fresh from language picker on next message.
 	EnableInactivityMonitor bool
 
+	// AtalJanseva public REST API (grievances, appointments, listings).
+	AtalJansevaAPIBaseURL string // empty → https://api.ataljanseva.in
+	AtalJansevaAPITimeout int    // per-request timeout in seconds
+
 	// Server
 	Port string
 }
@@ -53,6 +57,9 @@ func Load() (*Config, error) {
 		QueueDepth:              getEnvInt("QUEUE_DEPTH", 2000),
 		Port:                    getEnvOr("PORT", "8080"),
 		EnableInactivityMonitor: getEnvBool("ENABLE_INACTIVITY_MONITOR", true),
+
+		AtalJansevaAPIBaseURL: os.Getenv("ATALJANSEVA_API_BASE_URL"),
+		AtalJansevaAPITimeout: getEnvInt("ATALJANSEVA_API_TIMEOUT", 10),
 	}
 	if c.WAPhoneNumberID == "" {
 		return nil, fmt.Errorf("WA_PHONE_NUMBER_ID is required")
