@@ -48,6 +48,12 @@ func (wh *webhookHandler) verify(w http.ResponseWriter, r *http.Request) {
 // Meta requires a fast 200 ACK, so we respond before parsing.
 func (wh *webhookHandler) receive(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+	// Flush so Meta receives the 200 ACK immediately instead of waiting for
+	// the handler to finish enqueueing. Slow ACKs cause Meta to retry the
+	// delivery, which is another source of duplicate messages.
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -69,7 +75,7 @@ func (wh *webhookHandler) receive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, msg := range payload.Messages() {
-		slog.Info("meta message received", "from", msg.From, "type", msg.Type)
+		slog.Info("meta message received", "from", msg.From, "type", msg.Type, "message_id", msg.ID)
 		wh.pool.Enqueue(msg)
 	}
 }

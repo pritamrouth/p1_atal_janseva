@@ -63,6 +63,16 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 	log := slog.With("phone", msg.From, "type", msg.Type)
 	phone := msg.From
 
+	// Meta delivers webhooks at-least-once: the same WhatsApp message ID can
+	// arrive twice (or be retried). Claim it before doing any work, otherwise
+	// duplicate copies run concurrently and send duplicate replies.
+	if first, err := h.store.ClaimMessage(ctx, msg.ID); err != nil {
+		log.Warn("message dedup failed, processing anyway", "id", msg.ID, "err", err)
+	} else if !first {
+		log.Info("duplicate message ignored", "id", msg.ID)
+		return
+	}
+
 	h.inactive.Touch(ctx, phone)
 
 	sess, err := h.store.Get(ctx, phone)
@@ -71,7 +81,7 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 		return
 	}
 
-	if msg.Type == "text" && strings.EqualFold(strings.TrimSpace(msg.Text.Body), "reset") {
+	if msg.Type == "text" && msg.Text != nil && strings.EqualFold(strings.TrimSpace(msg.Text.Body), "reset") {
 		if err := h.store.Reset(ctx, phone); err != nil {
 			log.Error("reset session", "err", err)
 		}
@@ -86,7 +96,7 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 		h.handleStart(ctx, phone, sess, msg)
 
 	case store.StepLangChosen:
-		if msg.Type == "text" {
+		if msg.Type == "text" && msg.Text != nil {
 			h.handlePin(ctx, phone, sess, strings.TrimSpace(msg.Text.Body))
 		} else {
 			_ = h.wa.SendText(ctx, phone, h.t(sess).PinPrompt)
@@ -107,21 +117,21 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 		}
 
 	case store.StepComplaint:
-		if msg.Type == "text" {
+		if msg.Type == "text" && msg.Text != nil {
 			h.handleComplaintDetails(ctx, phone, sess, msg.Text.Body)
 		} else {
 			h.promptComplaint(ctx, phone, sess)
 		}
 
 	case store.StepTrackTicket:
-		if msg.Type == "text" {
+		if msg.Type == "text" && msg.Text != nil {
 			h.handleTrackTicket(ctx, phone, sess, msg.Text.Body)
 		} else {
 			_ = h.wa.SendText(ctx, phone, h.t(sess).TrackPrompt)
 		}
 
 	case store.StepMeeting:
-		if msg.Type == "text" {
+		if msg.Type == "text" && msg.Text != nil {
 			h.handleMeetingDetails(ctx, phone, sess, msg.Text.Body)
 		} else {
 			_ = h.wa.SendText(ctx, phone, h.t(sess).MeetingPrompt)
@@ -154,6 +164,9 @@ func (h *Handler) handleStart(ctx context.Context, phone string, sess *store.Ses
 			lang = "hi"
 		}
 	case msg.Type == "text":
+		if msg.Text == nil {
+			break
+		}
 		choice := strings.TrimSpace(msg.Text.Body)
 		// Button order: Marathi (1), English (2), Hindi (3)
 		switch choice {

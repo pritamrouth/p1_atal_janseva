@@ -19,6 +19,12 @@ import (
 const (
 	sessionTTL = 24 * time.Hour
 	keyPrefix  = "wa:session:"
+
+	// messageKeyPrefix marks an inbound WhatsApp message ID as processed.
+	// Meta delivers webhooks at-least-once, so the same message can arrive
+	// more than once; the TTL covers its retry window.
+	messageKeyPrefix = "wa:msg:"
+	messageDedupTTL  = 7 * 24 * time.Hour
 )
 
 // Step represents the current step in the conversation flow.
@@ -142,6 +148,24 @@ func (s *Store) Reset(ctx context.Context, phone string) error {
 		return fmt.Errorf("redis DEL %s: %w", phone, err)
 	}
 	return nil
+}
+
+// ClaimMessage atomically records an inbound WhatsApp message ID and reports
+// whether this is the first time it has been seen. It returns false for a
+// duplicate webhook delivery. The check is atomic (SET NX), so two concurrent
+// deliveries of the same message cannot both be processed.
+//
+// An empty ID means the payload cannot be deduplicated; it is treated as new.
+// Callers should fail open (process the message) when an error is returned.
+func (s *Store) ClaimMessage(ctx context.Context, messageID string) (bool, error) {
+	if messageID == "" {
+		return true, nil
+	}
+	first, err := s.rdb.SetNX(ctx, messageKeyPrefix+messageID, 1, messageDedupTTL).Result()
+	if err != nil {
+		return false, fmt.Errorf("redis SETNX %s: %w", messageID, err)
+	}
+	return first, nil
 }
 
 func key(phone string) string {
