@@ -20,13 +20,18 @@ const apiBase = "https://graph.facebook.com/v20.0"
 
 // MetaClient is a high-concurrency WhatsApp Cloud API client.
 type MetaClient struct {
-	phoneNumberID string
-	accessToken   string
-	http          *http.Client
+	phoneNumberID      string
+	accessToken        string
+	messagingAccountID string
+	baseURL            string
+	http               *http.Client
 }
 
 // NewMetaClient returns a MetaClient with a tuned HTTP transport.
-func NewMetaClient(phoneNumberID, accessToken string) *MetaClient {
+// messagingAccountID is optional; when set it is sent as messaging_account_id
+// so Meta bills the intended Messaging account (formerly the WABA) when the
+// phone number is attached to more than one.
+func NewMetaClient(phoneNumberID, accessToken, messagingAccountID string) *MetaClient {
 	transport := &http.Transport{
 		MaxIdleConns:        200,
 		MaxIdleConnsPerHost: 100,
@@ -41,8 +46,10 @@ func NewMetaClient(phoneNumberID, accessToken string) *MetaClient {
 		ForceAttemptHTTP2:     true,
 	}
 	return &MetaClient{
-		phoneNumberID: phoneNumberID,
-		accessToken:   accessToken,
+		phoneNumberID:      phoneNumberID,
+		accessToken:        accessToken,
+		messagingAccountID: messagingAccountID,
+		baseURL:            apiBase,
 		http: &http.Client{
 			Transport: transport,
 			Timeout:   15 * time.Second,
@@ -55,10 +62,11 @@ func NewMetaClient(phoneNumberID, accessToken string) *MetaClient {
 // ─────────────────────────────────────────────
 
 type textBody struct {
-	MessagingProduct string  `json:"messaging_product"`
-	To               string  `json:"to"`
-	Type             string  `json:"type"`
-	Text             textObj `json:"text"`
+	MessagingProduct   string  `json:"messaging_product"`
+	To                 string  `json:"to"`
+	Type               string  `json:"type"`
+	MessagingAccountID string  `json:"messaging_account_id,omitempty"`
+	Text               textObj `json:"text"`
 }
 type textObj struct {
 	PreviewURL bool   `json:"preview_url"`
@@ -70,10 +78,11 @@ type textObj struct {
 // ─────────────────────────────────────────────
 
 type imageBody struct {
-	MessagingProduct string   `json:"messaging_product"`
-	To               string   `json:"to"`
-	Type             string   `json:"type"`
-	Image            imageObj `json:"image"`
+	MessagingProduct   string   `json:"messaging_product"`
+	To                 string   `json:"to"`
+	Type               string   `json:"type"`
+	MessagingAccountID string   `json:"messaging_account_id,omitempty"`
+	Image              imageObj `json:"image"`
 }
 type imageObj struct {
 	Link    string `json:"link"`
@@ -85,10 +94,11 @@ type imageObj struct {
 // ─────────────────────────────────────────────
 
 type interactiveBody struct {
-	MessagingProduct string         `json:"messaging_product"`
-	To               string         `json:"to"`
-	Type             string         `json:"type"`
-	Interactive      interactiveObj `json:"interactive"`
+	MessagingProduct   string         `json:"messaging_product"`
+	To                 string         `json:"to"`
+	Type               string         `json:"type"`
+	MessagingAccountID string         `json:"messaging_account_id,omitempty"`
+	Interactive        interactiveObj `json:"interactive"`
 }
 type interactiveObj struct {
 	Type   string          `json:"type"`
@@ -134,18 +144,20 @@ type listRow struct {
 
 func (c *MetaClient) SendText(ctx context.Context, to, text string) error {
 	return c.post(ctx, textBody{
-		MessagingProduct: "whatsapp",
-		To:               to,
-		Type:             "text",
-		Text:             textObj{Body: text},
+		MessagingProduct:   "whatsapp",
+		To:                 to,
+		Type:               "text",
+		MessagingAccountID: c.messagingAccountID,
+		Text:               textObj{Body: text},
 	})
 }
 
 func (c *MetaClient) SendImage(ctx context.Context, to, imageURL, caption string) error {
 	return c.post(ctx, imageBody{
-		MessagingProduct: "whatsapp",
-		To:               to,
-		Type:             "image",
+		MessagingProduct:   "whatsapp",
+		To:                 to,
+		Type:               "image",
+		MessagingAccountID: c.messagingAccountID,
 		Image: imageObj{
 			Link:    imageURL,
 			Caption: caption,
@@ -162,9 +174,10 @@ func (c *MetaClient) SendButtonsWithImageHeader(ctx context.Context, to, bodyTex
 		})
 	}
 	msg := interactiveBody{
-		MessagingProduct: "whatsapp",
-		To:               to,
-		Type:             "interactive",
+		MessagingProduct:   "whatsapp",
+		To:                 to,
+		Type:               "interactive",
+		MessagingAccountID: c.messagingAccountID,
 		Interactive: interactiveObj{
 			Type:   "button",
 			Body:   interactText{Text: bodyText},
@@ -187,9 +200,10 @@ func (c *MetaClient) SendList(ctx context.Context, to, bodyText, buttonLabel str
 		waSections = append(waSections, listSection{Title: s.Title, Rows: rows})
 	}
 	return c.post(ctx, interactiveBody{
-		MessagingProduct: "whatsapp",
-		To:               to,
-		Type:             "interactive",
+		MessagingProduct:   "whatsapp",
+		To:                 to,
+		Type:               "interactive",
+		MessagingAccountID: c.messagingAccountID,
 		Interactive: interactiveObj{
 			Type: "list",
 			Body: interactText{Text: bodyText},
@@ -218,7 +232,7 @@ func (c *MetaClient) post(ctx context.Context, payload any) error {
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}
-	url := fmt.Sprintf("%s/%s/messages", apiBase, c.phoneNumberID)
+	url := fmt.Sprintf("%s/%s/messages", c.baseURL, c.phoneNumberID)
 
 	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {

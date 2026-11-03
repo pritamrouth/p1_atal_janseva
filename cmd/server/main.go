@@ -99,8 +99,11 @@ func main() {
 	)
 
 	// ── WhatsApp client (Meta Cloud API) ──────────────────────────────────────
-	messenger := whatsapp.NewMetaClient(cfg.WAPhoneNumberID, cfg.WAAccessToken)
-	slog.Info("using Meta WhatsApp provider")
+	messenger := whatsapp.NewMetaClient(cfg.WAPhoneNumberID, cfg.WAAccessToken, cfg.WAMessagingAccountID)
+	slog.Info("using Meta WhatsApp provider",
+		"phone_number_id", cfg.WAPhoneNumberID,
+		"messaging_account_id", cfg.WAMessagingAccountID,
+	)
 
 	// ── Inactivity monitor ────────────────────────────────────────────────────
 	// When a user is silent for 90 s:

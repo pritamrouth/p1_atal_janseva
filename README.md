@@ -71,6 +71,7 @@ same `.env` works (Plivo variables are simply ignored):
 | `WA_PHONE_NUMBER_ID` | – | **required** – Meta phone number ID |
 | `WA_ACCESS_TOKEN` | – | **required** – Meta system/user access token |
 | `WA_VERIFY_TOKEN` | – | **required** – webhook verify token |
+| `WA_MESSAGING_ACCOUNT_ID` | – | optional – Messaging account (formerly WABA) ID for billing; set when the number has multiple Messaging accounts |
 | `DATABASE_URL` | – | **required** – PostgreSQL DSN |
 | `DB_MAX_OPEN_CONNS` / `DB_MAX_IDLE_CONNS` | 25 / 10 | pool sizes |
 | `REDIS_ADDR` / `REDIS_PASSWORD` / `REDIS_DB` | `localhost:6379` / "" / 0 | session store |

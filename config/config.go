@@ -14,6 +14,10 @@ type Config struct {
 	WAPhoneNumberID string
 	WAAccessToken   string
 	WAVerifyToken   string
+	// WAMessagingAccountID is the Messaging account (formerly WABA ID) used for
+	// billing/attribution. Optional: set it when the number has more than one
+	// Messaging account, otherwise Meta resolves it from the access token.
+	WAMessagingAccountID string
 
 	// PostgreSQL
 	DatabaseURL    string
@@ -47,6 +51,7 @@ func Load() (*Config, error) {
 		WAPhoneNumberID:         os.Getenv("WA_PHONE_NUMBER_ID"),
 		WAAccessToken:           os.Getenv("WA_ACCESS_TOKEN"),
 		WAVerifyToken:           os.Getenv("WA_VERIFY_TOKEN"),
+		WAMessagingAccountID:    getEnvOr("WA_MESSAGING_ACCOUNT_ID", os.Getenv("WA_PAID_MESSAGING_ACCOUNT_ID")),
 		DatabaseURL:             os.Getenv("DATABASE_URL"),
 		RedisAddr:               getEnvOr("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:           os.Getenv("REDIS_PASSWORD"),
