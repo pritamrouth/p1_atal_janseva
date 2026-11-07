@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ataljanseva/janseva-chatbot/internal/whatsapp"
-	"github.com/ataljanseva/janseva-chatbot/internal/worker"
+	"janseva_chatbot/internal/whatsapp"
+	"janseva_chatbot/internal/worker"
 )
 
 // webhookHandler handles Meta webhook verification (GET) and inbound events (POST).

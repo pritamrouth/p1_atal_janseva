@@ -15,7 +15,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ataljanseva/janseva-chatbot/internal/whatsapp"
+	"janseva_chatbot/internal/whatsapp"
 )
 
 // Job is a single unit of work: one inbound WhatsApp message.

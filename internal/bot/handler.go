@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ataljanseva/janseva-chatbot/internal/api"
-	"github.com/ataljanseva/janseva-chatbot/internal/db"
-	"github.com/ataljanseva/janseva-chatbot/internal/inactivity"
-	"github.com/ataljanseva/janseva-chatbot/internal/store"
-	"github.com/ataljanseva/janseva-chatbot/internal/whatsapp"
+	"janseva_chatbot/internal/api"
+	"janseva_chatbot/internal/db"
+	"janseva_chatbot/internal/inactivity"
+	"janseva_chatbot/internal/store"
+	"janseva_chatbot/internal/whatsapp"
 )
 
 // jobTimeout budgets one inbound message end-to-end. It must comfortably fit

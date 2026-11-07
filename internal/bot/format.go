@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ataljanseva/janseva-chatbot/internal/api"
+	"janseva_chatbot/internal/api"
 )
 
 // maxInfoItems is how many records of an API listing are shown in one message.

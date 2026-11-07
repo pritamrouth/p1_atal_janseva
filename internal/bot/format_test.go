@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ataljanseva/janseva-chatbot/internal/api"
+	"janseva_chatbot/internal/api"
 )
 
 func TestNumbered(t *testing.T) {
