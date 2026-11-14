@@ -131,9 +131,6 @@ func TestNormalizePin(t *testing.T) {
 	if got := normalizePin("४००६०१"); got != "400601" {
 		t.Errorf("normalizePin = %q", got)
 	}
-	if got := asciiToDevanagariDigits("400601"); got != "४००६०१" {
-		t.Errorf("asciiToDevanagariDigits = %q", got)
-	}
 }
 
 func TestMenuRowsCount(t *testing.T) {
@@ -146,45 +143,6 @@ func TestMenuRowsCount(t *testing.T) {
 		if r[0] != want {
 			t.Errorf("row %d id = %q, want %q", i, r[0], want)
 		}
-	}
-}
-
-// Meta rejects list messages with more than 10 rows TOTAL (error #131009),
-// so any row set (e.g. a long leader list) must be split into chunks of ≤10.
-func TestChunkRows(t *testing.T) {
-	rows := menuRows(I18n["en"])
-	chunks := chunkRows(rows)
-
-	if len(chunks) != 2 {
-		t.Fatalf("chunks = %d, want 2", len(chunks))
-	}
-	if len(chunks[0]) != 10 {
-		t.Errorf("chunk 0 rows = %d, want 10", len(chunks[0]))
-	}
-	if len(chunks[1]) != 3 {
-		t.Errorf("chunk 1 rows = %d, want 3", len(chunks[1]))
-	}
-
-	// Order and content must be preserved across chunks.
-	var merged [][3]string
-	for _, c := range chunks {
-		merged = append(merged, c...)
-	}
-	if len(merged) != len(rows) {
-		t.Fatalf("merged rows = %d, want %d", len(merged), len(rows))
-	}
-	for i, r := range merged {
-		if r[0] != rows[i][0] {
-			t.Errorf("merged row %d id = %q, want %q", i, r[0], rows[i][0])
-		}
-	}
-
-	// Exactly 10 rows → single chunk; empty → no chunks.
-	if got := chunkRows(rows[:10]); len(got) != 1 {
-		t.Errorf("10 rows produced %d chunks, want 1", len(got))
-	}
-	if got := chunkRows(nil); len(got) != 0 {
-		t.Errorf("nil rows produced %d chunks, want 0", len(got))
 	}
 }
 

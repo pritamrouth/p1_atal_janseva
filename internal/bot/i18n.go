@@ -1,15 +1,9 @@
 package bot
 
-import "fmt"
-
 // Strings holds all localised UI text for one language.
 type Strings struct {
 	// Onboarding
-	PinPrompt     string
-	InvalidPin    string
-	LeaderPrompt  string // %s = pincode
-	SelectLeader  string // list button label
-	LeaderSection string // list section title
+	LeaderUnavailable string
 
 	// Main menu
 	MenuHeading     string // %[1]s = leader name
@@ -80,80 +74,14 @@ type Strings struct {
 	SchemesHeader      string
 	JanSevaHeader      string
 	YouthHeader        string
-
-	// Generic labels
-	LabelEnglish string
-	LabelMarathi string
-	LabelHindi   string
 }
 
-// GreetingFor returns a personalised greeting with the user's real phone number.
-// phone is the E.164 number from the webhook (e.g. "919812345678").
-// The greeting is intentionally trilingual (EN / MR / HI) before any language
-// has been chosen.
-func GreetingFor(lang, phone string) string {
-	formatted := formatPhone(phone)
-
-	return fmt.Sprintf(`👋 Hi *%s*
-Please select your preferred language from below 👇!!
-
-कृपया तुमची पसंतीची भाषा निवडा 👇!!
-
-कृपया नीचे से अपनी पसंदीदा भाषा चुनें 👇!!`, formatted)
-}
-
-// formatPhone converts "919812345678" → "+91 98123 45678"
-func formatPhone(raw string) string {
-	digits := raw
-	if len(digits) > 0 && digits[0] == '+' {
-		digits = digits[1:]
-	}
-	// Indian numbers arrive as 91XXXXXXXXXX (12 digits)
-	if len(digits) == 12 && digits[:2] == "91" {
-		local := digits[2:] // 10 digits
-		return fmt.Sprintf("+91 %s %s", local[:5], local[5:])
-	}
-	// Fallback: just prefix "+"
-	return "+" + digits
-}
-
-// partyName returns the BJP party label for a language.
-func partyName(lang string) string {
-	switch lang {
-	case "hi":
-		return "भारतीय जनता पार्टी (भाजपा)"
-	case "mr":
-		return "भारतीय जनता पक्ष (भाजप)"
-	default:
-		return "BJP"
-	}
-}
-
-// I18n maps a language code to its Strings.
-// NOTE: Greeting is intentionally left out here — use GreetingFor() instead
-// so the user's real number is injected at runtime.
+// I18n maps a language code to its Strings. The live flow always uses
+// defaultLang ("mr"); English and Hindi are retained for older sessions.
 var I18n = map[string]Strings{
 	"en": {
-		PinPrompt: `This is the *Ataljanseva Citizen Service* Automatic Reply Chatbot.
-
-To continue further, please enter your *6-digit PIN Code* in the following format 👇!!.
-
-📍 *PIN Code*
-Example: *400601*`,
-
-		InvalidPin: `The entered PIN Code *%s* could not be found or do not match our records.
-
-Please re-enter the correct *6-digit PIN Code* in the following format to continue 👇
-
-📍 *PIN Code*
-Example: *400601*`,
-
-		LeaderPrompt: `You entered PIN Code *%s* successfully.
-
-Please select your Leader from the list below 👇!!`,
-
-		SelectLeader:  "Select Leader",
-		LeaderSection: "🏅 Leaders",
+		LeaderUnavailable: `Sorry, we couldn't connect you to the leader's office right now.
+Please try again in a moment.`,
 
 		MenuHeading:     "🎖️ *%[1]s*\n🎖️ BJP\n\nWelcome to %[1]s's E-Office",
 		MenuInstruction: "Select Option 👇",
@@ -261,33 +189,11 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		SchemesHeader:      `Government schemes & services:`,
 		JanSevaHeader:      `Local services near you:`,
 		YouthHeader:        `Latest social campaigns:`,
-
-		LabelEnglish: "English",
-		LabelMarathi: "मराठी",
-		LabelHindi:   "हिंदी",
 	},
 
 	"mr": {
-		PinPrompt: `हे अटलजनसेवा नागरिक सेवेची ऑटोमॅटिक रिप्लाय चॅटबॉट आहे.
-
-पुढे जाण्यासाठी कृपया आपला ६ अंकी पिन कोड खालील स्वरूपात प्रविष्ट करा 👇!!
-
-📍 *पिन कोड*
-उदाहरण: *४००६०१*`,
-
-		InvalidPin: `प्रविष्ट केलेला पिन कोड *%s* आमच्या नोंदींशी जुळत नाही किंवा सापडला नाही.
-
-पुढे जाण्यासाठी कृपया आपला योग्य *६ अंकी पिन कोड* खालील स्वरूपात पुन्हा प्रविष्ट करा 👇!!
-
-📍 *पिन कोड*
-उदाहरण: *४००६०१*`,
-
-		LeaderPrompt: `आपण पिन कोड *%s* यशस्वीरित्या टाकला आहे.
-
-कृपया खालील यादीमधून आपल्या नेत्याची निवड करा 👇!!`,
-
-		SelectLeader:  "नेता निवडा",
-		LeaderSection: "नेते",
+		LeaderUnavailable: `क्षमस्व, आत्ता आपल्याला नेत्यांच्या कार्यालयाशी जोडता आले नाही.
+कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
 
 		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\n%[1]s ई-ऑफिसमध्ये आपले स्वागत आहे",
 		MenuInstruction: "पर्याय निवडा 👇",
@@ -393,33 +299,11 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		SchemesHeader:      `सरकारी योजना आणि सेवा:`,
 		JanSevaHeader:      `जवळच्या स्थानिक सेवा:`,
 		YouthHeader:        `नवीनतम सामाजिक मोहिमा:`,
-
-		LabelEnglish: "English",
-		LabelMarathi: "मराठी",
-		LabelHindi:   "हिंदी",
 	},
 
 	"hi": {
-		PinPrompt: `*अटलजनसेवा नागरिक सेवा* ऑटोमेटिक रिप्लाई चैटबॉट है।
-
-आगे बढ़ने के लिए कृपया अपना ६ अंकों का पिन कोड नीचे दिए गए प्रारूप में दर्ज करें 👇!!
-
-📍 *पिन कोड*
-उदाहरण: *४००६०१*`,
-
-		InvalidPin: `आपके द्वारा दर्ज की गई पिन कोड *%s* गलत है या उपलब्ध नहीं है।
-
-आगे बढ़ने के लिए कृपया अपना सही ६ अंकों का पिन कोड नीचे दिए गए प्रारूप में पुनः दर्ज करें 👇
-
-📍 *पिन कोड*
-उदाहरण: *४००६०१*`,
-
-		LeaderPrompt: `आपने पिन कोड *%s* सफलतापूर्वक दर्ज किया है।
-
-कृपया नीचे दी गई सूची में से अपने नेता का चयन करें 👇!!`,
-
-		SelectLeader:  "नेता चुनें",
-		LeaderSection: "नेता",
+		LeaderUnavailable: `क्षमा करें, अभी आपको नेता जी के कार्यालय से नहीं जोड़ा जा सका।
+कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
 
 		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\n%[1]s के ई-ऑफिस में आपका स्वागत है",
 		MenuInstruction: "विकल्प चुनें 👇",
@@ -525,9 +409,5 @@ ataljanseva.in पर Made-in-India उत्पाद खरीदें और
 		SchemesHeader:      `सरकारी योजनाएं और सेवाएं:`,
 		JanSevaHeader:      `आपके पास की स्थानीय सेवाएं:`,
 		YouthHeader:        `नवीनतम सामाजिक अभियान:`,
-
-		LabelEnglish: "English",
-		LabelMarathi: "मराठी",
-		LabelHindi:   "हिंदी",
 	},
 }

@@ -218,19 +218,6 @@ func normalizePin(s string) string {
 	return b.String()
 }
 
-// asciiToDevanagariDigits converts ASCII digits (0-9) to Devanagari digits (०-९)
-func asciiToDevanagariDigits(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			b.WriteRune('०' + (r - '0'))
-		} else {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
 // normalizeDate accepts DD-MM-YYYY, DD/MM/YYYY or YYYY-MM-DD (ASCII or
 // Devanagari digits) and returns the ISO form (YYYY-MM-DD) for PostgreSQL.
 func normalizeDate(s string) (string, bool) {

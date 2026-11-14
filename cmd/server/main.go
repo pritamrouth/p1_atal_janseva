@@ -97,6 +97,10 @@ func main() {
 		"base_url", cfg.AtalJansevaAPIBaseURL,
 		"timeout_s", cfg.AtalJansevaAPITimeout,
 	)
+	slog.Info("preselected leader configured",
+		"leader_id", cfg.LeaderID,
+		"leader_slug", cfg.LeaderSlug,
+	)
 
 	// ── WhatsApp client (Meta Cloud API) ──────────────────────────────────────
 	messenger := whatsapp.NewMetaClient(cfg.WAPhoneNumberID, cfg.WAAccessToken, cfg.WAMessagingAccountID)
@@ -109,17 +113,17 @@ func main() {
 	// When a user is silent for 90 s:
 	//   1. Their session is deleted from Redis (next message starts fresh).
 	//   2. upsert_citizen_ivr is called to persist the citizen record in PostgreSQL.
-	//      Only fires when the user completed at least pincode + leader selection.
+	//      Only fires after the user reached the preselected leader's main menu.
+	//      The PIN code is no longer collected, so citizen_ivr.pincode stays empty.
 	if cfg.EnableInactivityMonitor {
 		inactiveMonitor := inactivity.New(rdb, func(cbCtx context.Context, phone string, snap inactivity.SessionSnapshot) {
 			slog.Debug("user session expired (inactivity)", "phone", phone, "lang", snap.Lang)
 
-			// Skip the DB call if the user never completed the flow
-			// (no pincode or leader means the conversation was incomplete).
-			if snap.Pincode == "" || snap.NagarsevakID == "" {
+			// Skip the DB call if the user never reached the main menu
+			// (no leader means the conversation was incomplete).
+			if snap.NagarsevakID == "" {
 				slog.Debug("inactivity: incomplete session, skipping IVR upsert",
 					"phone", phone,
-					"pincode", snap.Pincode,
 					"nagarsevak_id", snap.NagarsevakID,
 				)
 				return
@@ -182,7 +186,7 @@ func runServer(
 	inactiveMonitor *inactivity.Monitor,
 	ajClient *api.Client,
 ) {
-	botHandler := bot.New(messenger, sessionStore, repo, inactiveMonitor, ajClient)
+	botHandler := bot.New(messenger, sessionStore, repo, inactiveMonitor, ajClient, cfg.LeaderID, cfg.LeaderSlug)
 
 	pool := worker.New(cfg.WorkerCount, cfg.QueueDepth, botHandler.HandleRaw)
 	pool.Start()

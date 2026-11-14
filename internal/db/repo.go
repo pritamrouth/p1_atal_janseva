@@ -1,8 +1,8 @@
 // Package db provides PostgreSQL access for the Ataljanseva backend.
 // Connection pool is tuned for high concurrency via config values.
-// Leader (nagarsevak) reads and the citizen IVR upsert go through
-// pre-existing PostgreSQL functions; complaints and meetings live in the
-// AtalJanseva REST API, not in this database.
+// The preselected leader is read from the political_users table; the citizen
+// IVR upsert uses a pre-existing PostgreSQL procedure. Complaints and meetings
+// live in the AtalJanseva REST API, not in this database.
 package db
 
 import (
@@ -20,14 +20,6 @@ import (
 // Domain types
 // ─────────────────────────────────────────────
 
-// LocationInfo holds the geographic metadata returned alongside leaders.
-type LocationInfo struct {
-	State         string
-	District      string
-	StateHindi    string
-	DistrictHindi string
-}
-
 // Nagarsevak holds a single leader's details.
 // ProfilePhoto is a public URL stored in the profile_photo column.
 type Nagarsevak struct {
@@ -38,13 +30,6 @@ type Nagarsevak struct {
 	Ward         string
 	Slug         string
 	ProfilePhoto string
-}
-
-// NagarsevakResult bundles location metadata and the matched leaders
-// returned from a single DB round-trip.
-type NagarsevakResult struct {
-	Location LocationInfo
-	List     []Nagarsevak
 }
 
 // ─────────────────────────────────────────────
@@ -86,110 +71,71 @@ func (r *Repo) Close() error { return r.db.Close() }
 // Leaders (nagarsevaks)
 // ─────────────────────────────────────────────
 
-// NagarsevaksByPincode fetches all active leaders for a given pincode.
-// Calls PostgreSQL function: get_nagarsevaks_by_pincode(TEXT)
-func (r *Repo) NagarsevaksByPincode(ctx context.Context, pincode string) (*NagarsevakResult, error) {
+// NagarsevakBySlug looks up the configured leader from political_users.
+// The chatbot skips the PIN-code and leader-selection steps, so the leader is
+// resolved directly by its unique slug.
+func (r *Repo) NagarsevakBySlug(ctx context.Context, slug string) (*Nagarsevak, error) {
 	start := time.Now()
-	slog.Debug("NagarsevaksByPincode", "pincode", pincode)
+	slog.Debug("NagarsevakBySlug", "slug", slug)
 
-	rows, err := r.db.QueryContext(
-		ctx,
-		`SELECT * FROM get_nagarsevaks_by_pincode($1)`,
-		pincode,
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id::text,
+		       full_name,
+		       COALESCE(name_hindi, ''),
+		       COALESCE(party, ''),
+		       COALESCE(ward, ''),
+		       slug,
+		       COALESCE(profile_photo, '')
+		FROM   political_users
+		WHERE  slug = $1
+		  AND  is_active = true
+		LIMIT  1`,
+		slug,
 	)
-	if err != nil {
-		slog.Error("NagarsevaksByPincode query failed",
-			"pincode", pincode,
+
+	var n Nagarsevak
+	if err := row.Scan(
+		&n.ID, &n.FullName, &n.NameHindi,
+		&n.Party, &n.Ward, &n.Slug,
+		&n.ProfilePhoto,
+	); err != nil {
+		slog.Error("NagarsevakBySlug failed",
+			"slug", slug,
 			"duration_ms", time.Since(start).Milliseconds(),
 			"err", err,
 		)
-		return nil, fmt.Errorf("NagarsevaksByPincode: %w", err)
+		return nil, fmt.Errorf("NagarsevakBySlug: %w", err)
 	}
-	defer rows.Close()
+	n.ProfilePhoto = strings.TrimSpace(n.ProfilePhoto)
 
-	var (
-		result  *NagarsevakResult
-		seenIDs = make(map[string]struct{})
-	)
-
-	for rows.Next() {
-		var (
-			state, district, stateHindi, districtHindi           string
-			id, fullName, nameHindi, party, ward, slug, photoURL string
-		)
-
-		if err := rows.Scan(
-			&state, &district, &stateHindi, &districtHindi,
-			&id, &fullName, &nameHindi, &party,
-			&ward, &slug, &photoURL,
-		); err != nil {
-			slog.Error("NagarsevaksByPincode scan failed",
-				"pincode", pincode,
-				"duration_ms", time.Since(start).Milliseconds(),
-				"err", err,
-			)
-			return nil, fmt.Errorf("NagarsevaksByPincode scan: %w", err)
-		}
-
-		// Initialise result from the first row.
-		// Location columns are identical across all rows for a given pincode.
-		if result == nil {
-			result = &NagarsevakResult{
-				Location: LocationInfo{
-					State:         state,
-					District:      district,
-					StateHindi:    stateHindi,
-					DistrictHindi: districtHindi,
-				},
-			}
-		}
-
-		// Deduplicate by ID.
-		if _, seen := seenIDs[id]; !seen {
-			seenIDs[id] = struct{}{}
-			result.List = append(result.List, Nagarsevak{
-				ID:           id,
-				FullName:     fullName,
-				NameHindi:    nameHindi,
-				Party:        party,
-				Ward:         ward,
-				Slug:         slug,
-				ProfilePhoto: strings.TrimSpace(photoURL),
-			})
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		slog.Error("NagarsevaksByPincode rows error",
-			"pincode", pincode,
-			"duration_ms", time.Since(start).Milliseconds(),
-			"err", err,
-		)
-		return nil, fmt.Errorf("NagarsevaksByPincode rows: %w", err)
-	}
-
-	if result == nil {
-		return nil, sql.ErrNoRows
-	}
-
-	slog.Debug("NagarsevaksByPincode success",
-		"pincode", pincode,
-		"leaders", len(result.List),
+	slog.Debug("NagarsevakBySlug success",
+		"slug", slug,
+		"name", n.FullName,
 		"duration_ms", time.Since(start).Milliseconds(),
 	)
 
-	return result, nil
+	return &n, nil
 }
 
 // NagarsevakByID looks up a single leader by primary key.
-// Calls PostgreSQL function: get_nagarsevak_by_id(TEXT)
+// Reads political_users directly so nullable columns (ward, name_hindi, …)
+// are normalised to empty strings before scanning.
 func (r *Repo) NagarsevakByID(ctx context.Context, id string) (*Nagarsevak, error) {
 	start := time.Now()
 	slog.Debug("NagarsevakByID", "id", id)
 
-	row := r.db.QueryRowContext(
-		ctx,
-		`SELECT * FROM get_nagarsevak_by_id($1)`,
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id::text,
+		       full_name,
+		       COALESCE(name_hindi, ''),
+		       COALESCE(party, ''),
+		       COALESCE(ward, ''),
+		       slug,
+		       COALESCE(profile_photo, '')
+		FROM   political_users
+		WHERE  id::text = $1
+		  AND  is_active = true
+		LIMIT  1`,
 		id,
 	)
 

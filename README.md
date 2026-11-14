@@ -8,13 +8,9 @@ conversation flow defined in `flow.txt`.
 ## Conversation flow
 
 ```
-Language picker (Marathi / English / Hindi)   ← hero banner + 3 reply buttons
+Any first message
         ↓
-6-digit PIN code                              ← hero banner image prompt
-        ↓
-Leader list for the PIN code                  ← WhatsApp list ("Select Leader")
-        ↓
-Leader e-Office main menu                     ← leader photo + 13-option list
+Preselected leader's e-Office main menu       ← leader photo + 13-option list (Marathi)
         ├── 1  Raise complaint      → free-text details → POST /api/grievances → Ticket ID
         ├── 2  Track complaint      → Ticket ID → GET track/ticket → in progress / resolved / invalid
         ├── 3  Schedule meeting     → name/date/reason → free slots → POST book → confirmation
@@ -22,7 +18,13 @@ Leader e-Office main menu                     ← leader photo + 13-option list
         └── 10, 11, 13 Info replies → localised text + closing note, menu re-shown
 ```
 
-- All texts are localised in **English / Marathi / Hindi**.
+The language picker, PIN-code and leader-selection steps are skipped. The
+leader is chosen at deployment time with `LEADER_ID` / `LEADER_SLUG` and read
+from the `political_users` table. Every citizen lands directly in that leader's
+e-Office in **Marathi**.
+
+- Marathi is the default and only language in the live flow. English and Hindi
+  strings remain in `i18n.go` for older in-flight sessions.
 - Complaints, tracking, appointments and the info listings come from the
   public **AtalJanseva REST API** (`ATALJANSEVA_API_BASE_URL`, no auth).
   When the API fails or returns nothing, options 4–9 and 12 fall back to
@@ -32,8 +34,9 @@ Leader e-Office main menu                     ← leader photo + 13-option list
   (API error `#131009`), not 10 per section. Tapping "More Options" reveals
   options 10–13 in a second list.
 - Typing `reset` at any point restarts the conversation.
-- Sessions expire silently after 90 s of inactivity; completed sessions
-  (PIN + leader) are persisted to `citizen_ivr` via `upsert_citizen_ivr`.
+- Sessions expire silently after 90 s of inactivity; sessions that reached the
+  main menu are persisted to `citizen_ivr` via `upsert_citizen_ivr`. Because no
+  PIN is collected, `citizen_ivr.pincode` stays empty.
 
 ## Prerequisites
 
@@ -79,6 +82,8 @@ same `.env` works (Plivo variables are simply ignored):
 | `ENABLE_INACTIVITY_MONITOR` | `true` | 90 s idle session expiry |
 | `ATALJANSEVA_API_BASE_URL` | `https://api.ataljanseva.in` | AtalJanseva REST API (local: `http://localhost:3000`) |
 | `ATALJANSEVA_API_TIMEOUT` | 10 | per-request API timeout (seconds) |
+| `LEADER_ID` | – | optional – preselected leader UUID (takes precedence) |
+| `LEADER_SLUG` | `meghnabordikar` | preselected leader slug in `political_users` |
 | `PORT` / `ENV` | 8080 / development | HTTP server / JSON logs in production |
 | `MIGRATIONS_DIR` | `migrations` | where `*.sql` migrations live |
 
@@ -86,9 +91,12 @@ same `.env` works (Plivo variables are simply ignored):
 
 **Pre-existing** (same as the original backend, created outside this repo):
 
-- `get_nagarsevaks_by_pincode(TEXT)` – location + leaders for a PIN code
-- `get_nagarsevak_by_id(TEXT)` – single leader
+- `political_users` – preselected leader row, resolved by `LEADER_ID` or
+  `LEADER_SLUG` (`is_active = true`)
 - `upsert_citizen_ivr(phone, lang, pincode, ward, nagarsevak_id)` – citizen persistence
+
+`get_nagarsevaks_by_pincode(TEXT)` and `get_nagarsevak_by_id(TEXT)` are no
+longer called by the chatbot.
 
 **Migrations** (applied automatically at startup, tracked in
 `schema_migrations`): `migrations/002_drop_complaints_and_meetings.sql` drops

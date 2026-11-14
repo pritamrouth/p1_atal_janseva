@@ -34,12 +34,18 @@ type Config struct {
 	QueueDepth  int // buffered channel depth
 
 	// Inactivity monitoring: delete user session after 90 seconds of inactivity
-	// (no message sent). User starts fresh from language picker on next message.
+	// (no message sent). User starts fresh from the main menu on next message.
 	EnableInactivityMonitor bool
 
 	// AtalJanseva public REST API (grievances, appointments, listings).
 	AtalJansevaAPIBaseURL string // empty → https://api.ataljanseva.in
 	AtalJansevaAPITimeout int    // per-request timeout in seconds
+
+	// Preselected leader. The chatbot no longer asks citizens for a PIN code
+	// or shows a leader list; it opens this leader's e-Office directly.
+	// LEADER_ID takes precedence over LEADER_SLUG when both are set.
+	LeaderID   string
+	LeaderSlug string
 
 	// Server
 	Port string
@@ -65,6 +71,9 @@ func Load() (*Config, error) {
 
 		AtalJansevaAPIBaseURL: os.Getenv("ATALJANSEVA_API_BASE_URL"),
 		AtalJansevaAPITimeout: getEnvInt("ATALJANSEVA_API_TIMEOUT", 10),
+
+		LeaderID:   os.Getenv("LEADER_ID"),
+		LeaderSlug: getEnvOr("LEADER_SLUG", "meghnabordikar"),
 	}
 	if c.WAPhoneNumberID == "" {
 		return nil, fmt.Errorf("WA_PHONE_NUMBER_ID is required")

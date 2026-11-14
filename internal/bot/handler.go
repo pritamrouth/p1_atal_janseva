@@ -1,14 +1,15 @@
 // Package bot implements the Ataljanseva citizen service conversation flow:
-// language → PIN code → leader selection → 13-option main menu → sub-flows
-// (raise complaint, track complaint, schedule meeting, information replies).
-// Complaints, tracking, appointments and info listings call the public
-// AtalJanseva REST API (internal/api); leaders come from PostgreSQL.
+// preselected leader's 13-option main menu (Marathi) → sub-flows (raise
+// complaint, track complaint, schedule meeting, information replies).
+// The leader is configured at startup (LEADER_ID / LEADER_SLUG) and read from
+// political_users, so citizens no longer enter a PIN code, choose a leader, or
+// pick a language. Complaints, tracking, appointments and info listings call
+// the public AtalJanseva REST API (internal/api).
 // All operations are context-aware for proper timeout/cancellation propagation.
 package bot
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -28,9 +29,9 @@ import (
 // the leader photo itself, which can be slow on first send) + a retry.
 const jobTimeout = 30 * time.Second
 
-// Hero banner used for the language picker and the PIN-code prompt,
-// and the leader profile photo come from the same assets as the original backend.
-const heroBannerURL = "https://res.cloudinary.com/dkgfw2zf0/image/upload/v1781075980/8005beb1-ec05-401f-b514-19f1e00f00ab_de87md.png"
+// defaultLang is Marathi: the language picker was removed, so every session
+// starts in Marathi.
+const defaultLang = "mr"
 
 // meetingSlots are the fixed candidate slots offered after the meeting
 // details have been captured: {row id, label, 24h time}. Booked ones are
@@ -44,15 +45,32 @@ var meetingSlots = [][3]string{
 
 // Handler processes inbound WhatsApp messages.
 type Handler struct {
-	wa       whatsapp.Messenger
-	store    *store.Store
-	repo     *db.Repo
-	inactive *inactivity.Monitor
-	api      *api.Client
+	wa         whatsapp.Messenger
+	store      *store.Store
+	repo       *db.Repo
+	inactive   *inactivity.Monitor
+	api        *api.Client
+	leaderID   string // optional UUID override
+	leaderSlug string // used when leaderID is empty
 }
 
-func New(wa whatsapp.Messenger, s *store.Store, repo *db.Repo, inactive *inactivity.Monitor, apiClient *api.Client) *Handler {
-	return &Handler{wa: wa, store: s, repo: repo, inactive: inactive, api: apiClient}
+func New(
+	wa whatsapp.Messenger,
+	s *store.Store,
+	repo *db.Repo,
+	inactive *inactivity.Monitor,
+	apiClient *api.Client,
+	leaderID, leaderSlug string,
+) *Handler {
+	return &Handler{
+		wa:         wa,
+		store:      s,
+		repo:       repo,
+		inactive:   inactive,
+		api:        apiClient,
+		leaderID:   leaderID,
+		leaderSlug: leaderSlug,
+	}
 }
 
 // HandleRaw is the worker entry-point: one call per inbound message.
@@ -86,28 +104,26 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 			log.Error("reset session", "err", err)
 		}
 		h.inactive.Cancel(ctx, phone)
-		_ = h.wa.SendText(ctx, phone, "🔄 Session reset. Type anything to start over.")
+		_ = h.wa.SendText(ctx, phone, "🔄 सेशन रीसेट झाले. पुन्हा सुरू करण्यासाठी काहीही टाइप करा.")
 		return
+	}
+
+	// The language picker was removed; Marathi is the only language. This also
+	// upgrades in-flight sessions left in English/Hindi.
+	if sess.Lang != defaultLang {
+		sess.Lang = defaultLang
+		if err := h.store.Save(ctx, sess); err != nil {
+			log.Warn("save default language", "err", err)
+		}
 	}
 
 	switch sess.Step {
 
-	case store.StepStart:
-		h.handleStart(ctx, phone, sess, msg)
-
-	case store.StepLangChosen:
-		if msg.Type == "text" && msg.Text != nil {
-			h.handlePin(ctx, phone, sess, strings.TrimSpace(msg.Text.Body))
-		} else {
-			_ = h.wa.SendText(ctx, phone, h.t(sess).PinPrompt)
-		}
-
-	case store.StepLeader:
-		if msg.Type == "interactive" && msg.Interactive != nil {
-			h.handleLeaderReply(ctx, phone, sess, msg.Interactive)
-		} else {
-			h.promptLeader(ctx, phone, sess)
-		}
+	case store.StepStart, store.StepLangChosen, store.StepLeader:
+		// New sessions, plus legacy sessions created before the language,
+		// PIN-code and leader-selection steps were removed, go straight to
+		// the preselected leader's Marathi menu.
+		h.beginSession(ctx, phone, sess)
 
 	case store.StepMainMenu:
 		if msg.Type == "interactive" && msg.Interactive != nil {
@@ -146,162 +162,25 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 	}
 }
 
-// ─────────────────────────────────────────────
-// Step 0 – language picker
-// ─────────────────────────────────────────────
-
-func (h *Handler) handleStart(ctx context.Context, phone string, sess *store.Session, msg whatsapp.Message) {
-	var lang string
-
-	switch {
-	case msg.Type == "interactive" && msg.Interactive != nil:
-		switch buttonID(msg.Interactive) {
-		case "lang_en":
-			lang = "en"
-		case "lang_mr":
-			lang = "mr"
-		case "lang_hi":
-			lang = "hi"
-		}
-	case msg.Type == "text":
-		if msg.Text == nil {
-			break
-		}
-		choice := strings.TrimSpace(msg.Text.Body)
-		// Button order: Marathi (1), English (2), Hindi (3)
-		switch choice {
-		case "lang_mr", "1", "मराठी":
-			lang = "mr"
-		case "lang_en", "2", "English":
-			lang = "en"
-		case "lang_hi", "3", "हिंदी":
-			lang = "hi"
-		}
-	}
-
-	if lang == "" {
-		h.sendLanguagePicker(ctx, phone, phone)
-		return
-	}
-
-	sess.Lang = lang
-	sess.Step = store.StepLangChosen
-	if err := h.store.Save(ctx, sess); err != nil {
-		slog.Error("save session", "phone", phone, "err", err)
-		return
-	}
-	h.sendPinPrompt(ctx, phone, sess)
-}
-
-func (h *Handler) sendLanguagePicker(ctx context.Context, phone, rawPhone string) {
-	greeting := GreetingFor("en", rawPhone)
-	if err := h.wa.SendButtonsWithImageHeader(ctx, phone, greeting, heroBannerURL, [][2]string{
-		{"lang_mr", "मराठी"},
-		{"lang_en", "English"},
-		{"lang_hi", "हिंदी"},
-	}); err != nil {
-		slog.Error("sendLanguagePicker", "phone", phone, "err", err)
-	}
-}
-
-func (h *Handler) sendPinPrompt(ctx context.Context, phone string, sess *store.Session) {
-	if err := h.wa.SendImage(ctx, phone, heroBannerURL, h.t(sess).PinPrompt); err != nil {
-		slog.Error("sendPinPrompt", "phone", phone, "err", err)
-		_ = h.wa.SendText(ctx, phone, h.t(sess).PinPrompt)
-	}
-}
-
-// ─────────────────────────────────────────────
-// Step 1 – PIN code → leaders for the pincode
-// ─────────────────────────────────────────────
-
-func (h *Handler) handlePin(ctx context.Context, phone string, sess *store.Session, raw string) {
-	pin := normalizePin(raw)
-
-	if len([]rune(pin)) != 6 {
-		h.sendInvalidPin(ctx, phone, sess, raw)
-		return
-	}
-
-	result, err := h.repo.NagarsevaksByPincode(ctx, pin)
+// beginSession binds the configured leader to the session and opens the
+// e-Office main menu. The language, PIN-code and leader-selection steps are
+// skipped; Marathi is always used.
+func (h *Handler) beginSession(ctx context.Context, phone string, sess *store.Session) {
+	ns, err := h.preselectedLeader(ctx)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			slog.Error("NagarsevaksByPincode", "pin", pin, "err", err)
+		slog.Error("preselected leader lookup failed",
+			"phone", phone,
+			"leader_id", h.leaderID,
+			"leader_slug", h.leaderSlug,
+			"err", err,
+		)
+		// Leave the session in a retryable onboarding step so the next
+		// message tries the leader lookup again.
+		sess.Step = store.StepLangChosen
+		if saveErr := h.store.Save(ctx, sess); saveErr != nil {
+			slog.Error("save session", "phone", phone, "err", saveErr)
 		}
-		h.sendInvalidPin(ctx, phone, sess, pin)
-		return
-	}
-
-	// Persist location and pincode from result.
-	sess.Pincode = pin
-	sess.State = result.Location.State
-	sess.District = result.Location.District
-	sess.StateHindi = result.Location.StateHindi
-	sess.DistrictHindi = result.Location.DistrictHindi
-	sess.Step = store.StepLeader
-
-	if err := h.store.Save(ctx, sess); err != nil {
-		slog.Error("save session", "phone", phone, "err", err)
-		return
-	}
-
-	h.sendLeaderList(ctx, phone, sess, result.List)
-}
-
-func (h *Handler) sendInvalidPin(ctx context.Context, phone string, sess *store.Session, pin string) {
-	displayPin := pin
-	if sess.Lang == "mr" || sess.Lang == "hi" {
-		displayPin = asciiToDevanagariDigits(pin)
-	}
-	_ = h.wa.SendText(ctx, phone, fmt.Sprintf(h.t(sess).InvalidPin, displayPin))
-}
-
-// ─────────────────────────────────────────────
-// Step 2 – leader list
-// ─────────────────────────────────────────────
-
-func (h *Handler) promptLeader(ctx context.Context, phone string, sess *store.Session) {
-	result, err := h.repo.NagarsevaksByPincode(ctx, sess.Pincode)
-	if err != nil || len(result.List) == 0 {
-		slog.Error("promptLeader", "pin", sess.Pincode, "err", err)
-		h.sendInvalidPin(ctx, phone, sess, sess.Pincode)
-		return
-	}
-	h.sendLeaderList(ctx, phone, sess, result.List)
-}
-
-// sendLeaderList renders the WhatsApp list message of leaders for the pincode.
-// Meta caps the TOTAL row count of one list message at 10 (error #131009),
-// so pin codes with more than 10 leaders are split across several messages.
-func (h *Handler) sendLeaderList(ctx context.Context, phone string, sess *store.Session, leaders []db.Nagarsevak) {
-	t := h.t(sess)
-
-	rows := make([][3]string, 0, len(leaders))
-	for _, ns := range leaders {
-		rows = append(rows, [3]string{"ns_" + ns.ID, displayName(sess.Lang, ns), partyName(sess.Lang)})
-	}
-
-	bodyText := fmt.Sprintf(t.LeaderPrompt, h.displayPin(sess, sess.Pincode))
-	for _, chunk := range chunkRows(rows) {
-		sections := []whatsapp.ListSection{{Title: t.LeaderSection, Rows: chunk}}
-		if err := h.sendListWithRetry(ctx, phone, bodyText, t.SelectLeader, sections); err != nil {
-			slog.Error("sendLeaderList", "phone", phone, "err", err)
-			return
-		}
-	}
-}
-
-func (h *Handler) handleLeaderReply(ctx context.Context, phone string, sess *store.Session, ir *whatsapp.InteractiveReply) {
-	id := listID(ir)
-	if !strings.HasPrefix(id, "ns_") {
-		h.promptLeader(ctx, phone, sess)
-		return
-	}
-
-	ns, err := h.repo.NagarsevakByID(ctx, strings.TrimPrefix(id, "ns_"))
-	if err != nil {
-		slog.Error("NagarsevakByID", "id", id, "err", err)
-		h.promptLeader(ctx, phone, sess)
+		_ = h.wa.SendText(ctx, phone, h.t(sess).LeaderUnavailable)
 		return
 	}
 
@@ -314,21 +193,25 @@ func (h *Handler) handleLeaderReply(ctx context.Context, phone string, sess *sto
 		slog.Error("save session", "phone", phone, "err", err)
 		return
 	}
-	h.sendMainMenu(ctx, phone, sess)
+
+	h.sendMainMenu(ctx, phone, sess, ns)
+}
+
+// preselectedLeader returns the leader configured for this deployment.
+// LEADER_ID wins when set; otherwise the leader is resolved by LEADER_SLUG.
+func (h *Handler) preselectedLeader(ctx context.Context) (*db.Nagarsevak, error) {
+	if id := strings.TrimSpace(h.leaderID); id != "" {
+		return h.repo.NagarsevakByID(ctx, id)
+	}
+	return h.repo.NagarsevakBySlug(ctx, strings.TrimSpace(h.leaderSlug))
 }
 
 // ─────────────────────────────────────────────
-// Step 3 – main menu (13 options)
+// Step 1 – main menu (13 options)
 // ─────────────────────────────────────────────
 
-func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Session) {
+func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Session, ns *db.Nagarsevak) {
 	t := h.t(sess)
-
-	ns, err := h.repo.NagarsevakByID(ctx, sess.NagarsevakID)
-	if err != nil {
-		slog.Error("sendMainMenu: NagarsevakByID", "phone", phone, "err", err)
-		ns = &db.Nagarsevak{FullName: sess.NagarsevakName}
-	}
 
 	heading := fmt.Sprintf(t.MenuHeading, displayName(sess.Lang, *ns))
 	if ns.ProfilePhoto != "" {
@@ -391,20 +274,6 @@ func (h *Handler) sendListWithRetry(ctx context.Context, phone, body, button str
 		}
 	}
 	return nil
-}
-
-// chunkRows splits rows into chunks of at most metaListMaxRows,
-// so each chunk can be sent as its own list message.
-func chunkRows(rows [][3]string) [][][3]string {
-	var chunks [][][3]string
-	for start := 0; start < len(rows); start += metaListMaxRows {
-		end := start + metaListMaxRows
-		if end > len(rows) {
-			end = len(rows)
-		}
-		chunks = append(chunks, rows[start:end])
-	}
-	return chunks
 }
 
 func (h *Handler) handleMenuSelection(ctx context.Context, phone string, sess *store.Session, ir *whatsapp.InteractiveReply) {
@@ -877,7 +746,7 @@ func (h *Handler) t(sess *store.Session) Strings {
 	if t, ok := I18n[sess.Lang]; ok {
 		return t
 	}
-	return I18n["en"]
+	return I18n[defaultLang]
 }
 
 // leaderDisplayName returns the leader's name in the session language,
@@ -896,14 +765,6 @@ func displayName(lang string, ns db.Nagarsevak) string {
 		return ns.NameHindi
 	}
 	return ns.FullName
-}
-
-// displayPin converts the pincode to Devanagari numerals for Hindi/Marathi.
-func (h *Handler) displayPin(sess *store.Session, pin string) string {
-	if sess.Lang == "mr" || sess.Lang == "hi" {
-		return asciiToDevanagariDigits(pin)
-	}
-	return pin
 }
 
 // menuRows builds the 13 main-menu rows in the session language.
@@ -938,19 +799,6 @@ func primaryMenuRows(t Strings) [][3]string {
 // secondaryMenuRows returns the options revealed by "More Options": 10–13.
 func secondaryMenuRows(t Strings) [][3]string {
 	return menuRows(t)[9:]
-}
-
-func buttonID(ir *whatsapp.InteractiveReply) string {
-	if ir == nil {
-		return ""
-	}
-	if ir.ButtonReply != nil {
-		return ir.ButtonReply.ID
-	}
-	if ir.ListReply != nil {
-		return ir.ListReply.ID
-	}
-	return ""
 }
 
 func listID(ir *whatsapp.InteractiveReply) string {

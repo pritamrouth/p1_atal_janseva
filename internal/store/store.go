@@ -31,9 +31,9 @@ const (
 type Step int
 
 const (
-	StepStart       Step = iota // 0 – show language picker
-	StepLangChosen              // 1 – language chosen, waiting for PIN code
-	StepLeader                  // 2 – PIN valid, waiting for leader selection
+	StepStart       Step = iota // 0 – new session, onboard directly in Marathi
+	StepLangChosen              // 1 – legacy: language chosen, onboarding the preselected leader
+	StepLeader                  // 2 – legacy: PIN-era leader selection, now also onboarded automatically
 	StepMainMenu                // 3 – onboarded, waiting for a menu option
 	StepComplaint               // 4 – waiting for complaint details (name/complaint/address)
 	StepTrackTicket             // 5 – waiting for a ticket ID
@@ -46,7 +46,7 @@ type Session struct {
 	PhoneNumber    string `json:"phone"`
 	Step           Step   `json:"step"`
 	Lang           string `json:"lang"`
-	Pincode        string `json:"pincode"`
+	Pincode        string `json:"pincode"` // empty: the PIN step was removed; kept for citizen_ivr
 	State          string `json:"state"`
 	District       string `json:"district"`
 	StateHindi     string `json:"state_hindi"`
