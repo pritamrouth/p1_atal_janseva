@@ -91,6 +91,20 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 		return
 	}
 
+	// A quick double tap sends two messages with different IDs but the same
+	// row. Ignore the second so it cannot re-book a meeting or render a
+	// duplicate menu after the step has already advanced.
+	if msg.Type == "interactive" && msg.Interactive != nil {
+		if rowID := interactiveID(msg.Interactive); rowID != "" {
+			if first, err := h.store.ClaimInteraction(ctx, phone, rowID); err != nil {
+				log.Warn("interactive dedup failed, processing anyway", "row_id", rowID, "err", err)
+			} else if !first {
+				log.Info("duplicate interactive selection ignored", "row_id", rowID)
+				return
+			}
+		}
+	}
+
 	h.inactive.Touch(ctx, phone)
 
 	sess, err := h.store.Get(ctx, phone)
@@ -278,6 +292,21 @@ func (h *Handler) sendListWithRetry(ctx context.Context, phone, body, button str
 
 func (h *Handler) handleMenuSelection(ctx context.Context, phone string, sess *store.Session, ir *whatsapp.InteractiveReply) {
 	id := listID(ir)
+
+	if id == "" {
+		// An interactive payload without a list row ID cannot be routed.
+		// The menu is already on screen, so do not send another copy.
+		return
+	}
+
+	if slotByID(id) != nil {
+		// Slot rows belong to the meeting step. A slot row arriving while the
+		// main menu is active is a stale/duplicate tap from a meeting that was
+		// already booked; the booking flow already sent the menu, so sending
+		// it again would duplicate it.
+		slog.Info("stale slot selection ignored", "phone", phone, "row_id", id)
+		return
+	}
 
 	if id == "opt_more" {
 		// Reveal the remaining options (10–13).
@@ -682,9 +711,11 @@ func (h *Handler) renderSlotList(ctx context.Context, phone string, sess *store.
 
 func (h *Handler) handleMeetingSlot(ctx context.Context, phone string, sess *store.Session, ir *whatsapp.InteractiveReply) {
 	t := h.t(sess)
+	rowID := listID(ir)
 
-	slot := slotByID(listID(ir))
+	slot := slotByID(rowID)
 	if slot == nil {
+		h.releaseInteraction(ctx, phone, rowID)
 		h.sendSlotList(ctx, phone, sess)
 		return
 	}
@@ -701,11 +732,13 @@ func (h *Handler) handleMeetingSlot(ctx context.Context, phone string, sess *sto
 	switch {
 	case api.IsSlotTaken(err):
 		// Someone else took the slot — re-fetch and offer what's left.
+		h.releaseInteraction(ctx, phone, rowID)
 		_ = h.wa.SendText(ctx, phone, t.MeetingSlotTaken)
 		h.sendSlotList(ctx, phone, sess)
 		return
 	case err != nil:
 		slog.Error("BookAppointment", "phone", phone, "date", sess.PendingDate, "time", slot[2], "err", err)
+		h.releaseInteraction(ctx, phone, rowID)
 		_ = h.wa.SendText(ctx, phone, t.MeetingFailed)
 		h.sendSlotList(ctx, phone, sess)
 		return
@@ -727,6 +760,14 @@ func (h *Handler) handleMeetingSlot(ctx context.Context, phone string, sess *sto
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
+
+// releaseInteraction clears the per-row dedup claim after a failure so the
+// citizen can immediately retry the same list row.
+func (h *Handler) releaseInteraction(ctx context.Context, phone, rowID string) {
+	if err := h.store.ReleaseInteraction(ctx, phone, rowID); err != nil {
+		slog.Warn("release interaction", "phone", phone, "row_id", rowID, "err", err)
+	}
+}
 
 // returnToMenu moves an active session back to the main menu and re-sends
 // the option list (without repeating the leader banner).
@@ -806,4 +847,19 @@ func listID(ir *whatsapp.InteractiveReply) string {
 		return ""
 	}
 	return ir.ListReply.ID
+}
+
+// interactiveID returns the selected row ID for either a button or a list
+// reply. It is used for per-row deduplication, not for routing.
+func interactiveID(ir *whatsapp.InteractiveReply) string {
+	if ir == nil {
+		return ""
+	}
+	if ir.ButtonReply != nil {
+		return ir.ButtonReply.ID
+	}
+	if ir.ListReply != nil {
+		return ir.ListReply.ID
+	}
+	return ""
 }

@@ -25,6 +25,12 @@ const (
 	// more than once; the TTL covers its retry window.
 	messageKeyPrefix = "wa:msg:"
 	messageDedupTTL  = 7 * 24 * time.Hour
+
+	// interactionKeyPrefix marks a (phone, interactive row) pair as processed.
+	// A quick double tap produces two different message IDs for the same row,
+	// so message-ID dedup alone cannot stop it.
+	interactionKeyPrefix = "wa:ia:"
+	interactionDedupTTL  = 10 * time.Second
 )
 
 // Step represents the current step in the conversation flow.
@@ -166,6 +172,34 @@ func (s *Store) ClaimMessage(ctx context.Context, messageID string) (bool, error
 		return false, fmt.Errorf("redis SETNX %s: %w", messageID, err)
 	}
 	return first, nil
+}
+
+// ClaimInteraction atomically records that a user selected an interactive row
+// (button or list item) and reports whether this is the first selection within
+// interactionDedupTTL. WhatsApp assigns a new message ID to every tap, so a
+// double tap bypasses ClaimMessage; this guard makes the selection idempotent.
+//
+// Empty phone or row IDs cannot be deduplicated and are treated as new.
+// Callers should fail open (process the message) when an error is returned.
+func (s *Store) ClaimInteraction(ctx context.Context, phone, rowID string) (bool, error) {
+	if phone == "" || rowID == "" {
+		return true, nil
+	}
+	key := interactionKeyPrefix + phone + ":" + rowID
+	first, err := s.rdb.SetNX(ctx, key, 1, interactionDedupTTL).Result()
+	if err != nil {
+		return false, fmt.Errorf("redis SETNX %s: %w", key, err)
+	}
+	return first, nil
+}
+
+// ReleaseInteraction removes a claimed selection so the user can retry the
+// same row immediately, e.g. after a failed booking left them on the same list.
+func (s *Store) ReleaseInteraction(ctx context.Context, phone, rowID string) error {
+	if phone == "" || rowID == "" {
+		return nil
+	}
+	return s.rdb.Del(ctx, interactionKeyPrefix+phone+":"+rowID).Err()
 }
 
 func key(phone string) string {

@@ -83,7 +83,7 @@ var I18n = map[string]Strings{
 		LeaderUnavailable: `Sorry, we couldn't connect you to the leader's office right now.
 Please try again in a moment.`,
 
-		MenuHeading:     "🎖️ *%[1]s*\n🎖️ BJP\n\nWelcome to %[1]s's E-Office",
+		MenuHeading:     "🎖️ *%[1]s*\n🎖️ BJP\n\nWelcome to the E-Office",
 		MenuInstruction: "Select Option 👇",
 		MenuButton:      "Select Option",
 		SectionOne:      "Services",
@@ -195,7 +195,7 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		LeaderUnavailable: `क्षमस्व, आत्ता आपल्याला नेत्यांच्या कार्यालयाशी जोडता आले नाही.
 कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
 
-		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\n%[1]s ई-ऑफिसमध्ये आपले स्वागत आहे",
+		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\nई-ऑफिसमध्ये आपले स्वागत आहे",
 		MenuInstruction: "पर्याय निवडा 👇",
 		MenuButton:      "पर्याय निवडा",
 		SectionOne:      "सेवा",
@@ -305,7 +305,7 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		LeaderUnavailable: `क्षमा करें, अभी आपको नेता जी के कार्यालय से नहीं जोड़ा जा सका।
 कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
 
-		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\n%[1]s के ई-ऑफिस में आपका स्वागत है",
+		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\nई-ऑफिस में आपका स्वागत है",
 		MenuInstruction: "विकल्प चुनें 👇",
 		MenuButton:      "विकल्प चुनें",
 		SectionOne:      "सेवाएं",
