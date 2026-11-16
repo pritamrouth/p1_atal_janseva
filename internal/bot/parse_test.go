@@ -93,12 +93,42 @@ Reason for Appointment: Discuss road work`
 	}
 }
 
+func TestParseMeetingDetailsNewPrompt(t *testing.T) {
+	// The appointment prompt now shows plain values in its example.
+	got, ok := parseDetails("राहुल पाटील\n20-11-2026\nपाणीपुरवठ्याबाबत तक्रार", meetingFields)
+	if !ok {
+		t.Fatal("expected plain appointment example to parse")
+	}
+	if got["date"] != "20-11-2026" {
+		t.Errorf("date = %q", got["date"])
+	}
+
+	// "भेटीची तारीख" is the label used by the new Marathi prompt.
+	raw := `पूर्ण नाव: राहुल पाटील
+भेटीची तारीख (DD-MM-YYYY): 20-11-2026
+भेटीचे कारण: पाणीपुरवठ्याबाबत तक्रार`
+	got, ok = parseDetails(raw, meetingFields)
+	if !ok {
+		t.Fatal("expected labelled appointment details to parse")
+	}
+	if got["name"] != "राहुल पाटील" || got["date"] != "20-11-2026" ||
+		got["reason"] != "पाणीपुरवठ्याबाबत तक्रार" {
+		t.Errorf("meeting details = %#v", got)
+	}
+}
+
 func TestNormalizeDate(t *testing.T) {
 	cases := map[string]string{
-		"25-12-2026": "2026-12-25",
-		"25/12/2026": "2026-12-25",
-		"2026-12-25": "2026-12-25",
-		"२५-१२-२०२६": "2026-12-25",
+		"25-12-2026":       "2026-12-25",
+		"25/12/2026":       "2026-12-25",
+		"25.12.2026":       "2026-12-25",
+		"2026-12-25":       "2026-12-25",
+		"२५-१२-२०२६":       "2026-12-25",
+		"25 Dec 2026":      "2026-12-25",
+		"25 december 2026": "2026-12-25",
+		"Dec 25, 2026":     "2026-12-25",
+		"25-12-26":         "2026-12-25",
+		"5-1-2026":         "2026-01-05",
 	}
 	for in, want := range cases {
 		got, ok := normalizeDate(in)
@@ -106,24 +136,150 @@ func TestNormalizeDate(t *testing.T) {
 			t.Errorf("normalizeDate(%q) = %q, %v; want %q", in, got, ok, want)
 		}
 	}
-	if _, ok := normalizeDate("not-a-date"); ok {
-		t.Error("expected failure for invalid date")
+	for _, in := range []string{"not-a-date", "31-02-2026", ""} {
+		if _, ok := normalizeDate(in); ok {
+			t.Errorf("normalizeDate(%q) unexpectedly succeeded", in)
+		}
 	}
 }
 
 func TestNormalizeTicket(t *testing.T) {
 	cases := map[string]string{
-		"TKT4821907":    "TKT4821907",
-		"tkt4821907":    "TKT4821907",
-		" tkt 4821907 ": "TKT4821907",
-		"TKT-4821907":   "TKT4821907",
-		"4821907":       "TKT4821907",
-		"":              "",
+		"TKT4821907":            "TKT4821907",
+		"tkt4821907":            "TKT4821907",
+		" tkt 4821907 ":         "TKT4821907",
+		"TKT-4821907":           "TKT4821907",
+		"4821907":               "TKT4821907",
+		"Ticket ID: TKT4821907": "TKT4821907",
+		"ticket id - 4821907":   "TKT4821907",
+		"*TKT4821907*":          "TKT4821907",
+		"टिकीट ID: TKT४८२१९०७":   "TKT4821907",
+		"माझा तिकीट ४८२१९०७ आहे": "TKT4821907",
+		"": "",
 	}
 	for in, want := range cases {
 		if got := normalizeTicket(in); got != want {
 			t.Errorf("normalizeTicket(%q) = %q; want %q", in, got, want)
 		}
+	}
+}
+
+// The prompts ask for blank lines between fields, but citizens may paste the
+// whole template, use dashes, bold labels or natural "is" phrasing.
+func TestParseDetailsRobustFormats(t *testing.T) {
+	raw := `To raise your complaint, please send your details in this format:
+
+*Enter your full name:*
+
+*Amit Sharma*
+
+Describe your complaint - Garbage not collected in our area since 3 days
+
+Address or location = Near Hanuman Mandir, Jintur`
+
+	got, ok := parseDetails(raw, complaintFields)
+	if !ok {
+		t.Fatal("expected parse success")
+	}
+	if got["name"] != "Amit Sharma" {
+		t.Errorf("name = %q", got["name"])
+	}
+	if got["description"] != "Garbage not collected in our area since 3 days" {
+		t.Errorf("description = %q", got["description"])
+	}
+	if got["address"] != "Near Hanuman Mandir, Jintur" {
+		t.Errorf("address = %q", got["address"])
+	}
+}
+
+func TestParseDetailsNaturalLanguage(t *testing.T) {
+	raw := `Name is Amit Sharma
+My complaint is garbage not collected since 3 days
+Address is Near Hanuman Mandir, Jintur`
+
+	got, ok := parseDetails(raw, complaintFields)
+	if !ok {
+		t.Fatal("expected parse success")
+	}
+	if got["name"] != "Amit Sharma" {
+		t.Errorf("name = %q", got["name"])
+	}
+	if got["description"] != "garbage not collected since 3 days" {
+		t.Errorf("description = %q", got["description"])
+	}
+	if got["address"] != "Near Hanuman Mandir, Jintur" {
+		t.Errorf("address = %q", got["address"])
+	}
+}
+
+func TestParseDetailsBareLabels(t *testing.T) {
+	raw := `Full Name
+Amit Sharma
+
+Describe your complaint
+Garbage not collected in our area since 3 days
+
+Address or location
+Near Hanuman Mandir, Jintur`
+
+	got, ok := parseDetails(raw, complaintFields)
+	if !ok {
+		t.Fatal("expected parse success")
+	}
+	if got["name"] != "Amit Sharma" {
+		t.Errorf("name = %q", got["name"])
+	}
+	if got["description"] != "Garbage not collected in our area since 3 days" {
+		t.Errorf("description = %q", got["description"])
+	}
+	if got["address"] != "Near Hanuman Mandir, Jintur" {
+		t.Errorf("address = %q", got["address"])
+	}
+}
+
+// The prompt now shows a plain-value example (no field labels), so a citizen
+// may simply send three spaced values in order, even after pasting the intro.
+func TestParseDetailsPlainExampleFormat(t *testing.T) {
+	raw := `आपण ⌨️ टाइप करून किंवा 🎤 व्हॉइस मेसेजद्वारे आपली तक्रार नोंदवू शकता.
+आपली तक्रार नोंदवण्यासाठी, कृपया आपली माहिती या फॉरमॅटमध्ये पाठवा:
+अमित शर्मा
+
+आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही
+
+हनुमान चौक, विठ्ठल रुक्मिणी मंदिराजवळ, जिंतूर`
+
+	got, ok := parseDetails(raw, complaintFields)
+	if !ok {
+		t.Fatal("expected parse success")
+	}
+	if got["name"] != "अमित शर्मा" {
+		t.Errorf("name = %q", got["name"])
+	}
+	if got["description"] != "आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही" {
+		t.Errorf("description = %q", got["description"])
+	}
+	if got["address"] != "हनुमान चौक, विठ्ठल रुक्मिणी मंदिराजवळ, जिंतूर" {
+		t.Errorf("address = %q", got["address"])
+	}
+}
+
+func TestParseDetailsIgnoresExampleHeader(t *testing.T) {
+	raw := `Enter your full name:
+Amit Sharma
+
+Example:
+Describe your complaint:
+Garbage not collected in our area since 3 days
+
+Enter the address or share the location where this complaint occurred:
+Near Hanuman Mandir, Jintur`
+
+	got, ok := parseDetails(raw, complaintFields)
+	if !ok {
+		t.Fatal("expected parse success")
+	}
+	if got["name"] != "Amit Sharma" || got["address"] != "Near Hanuman Mandir, Jintur" {
+		t.Errorf("parsed = %#v", got)
 	}
 }
 
@@ -133,64 +289,24 @@ func TestNormalizePin(t *testing.T) {
 	}
 }
 
-func TestMenuRowsCount(t *testing.T) {
-	rows := menuRows(I18n["en"])
-	if len(rows) != 13 {
-		t.Fatalf("menu rows = %d, want 13", len(rows))
-	}
-	for i, r := range rows {
-		want := "opt_" + itoa(i+1)
-		if r[0] != want {
-			t.Errorf("row %d id = %q, want %q", i, r[0], want)
-		}
-	}
-}
-
-// The main menu shows ONE list (Meta: max 10 rows total): options 1–9
-// plus a "More Options" row; tapping it reveals options 10–13.
-func TestPrimaryAndSecondaryMenuRows(t *testing.T) {
+// The main menu shows ONE list with exactly 10 rows (Meta's hard limit):
+// options 1–9 plus NariShakti as option 10. Options 11–13 were retired.
+func TestMenuRows(t *testing.T) {
 	for lang := range I18n {
 		s := I18n[lang]
-
-		primary := primaryMenuRows(s)
-		if len(primary) != metaListMaxRows {
-			t.Errorf("[%s] primary rows = %d, want %d", lang, len(primary), metaListMaxRows)
+		rows := menuRows(s)
+		if len(rows) != 10 {
+			t.Errorf("[%s] menu rows = %d, want 10", lang, len(rows))
+			continue
 		}
-		for i := 0; i < 9; i++ {
-			if want := "opt_" + itoa(i+1); primary[i][0] != want {
-				t.Errorf("[%s] primary row %d id = %q, want %q", lang, i, primary[i][0], want)
+		for i, r := range rows {
+			want := "opt_" + itoa(i+1)
+			if r[0] != want {
+				t.Errorf("[%s] row %d id = %q, want %q", lang, i, r[0], want)
 			}
 		}
-		if primary[9][0] != "opt_more" {
-			t.Errorf("[%s] last primary row id = %q, want opt_more", lang, primary[9][0])
-		}
-		if primary[9][1] != s.OptMoreOptions {
-			t.Errorf("[%s] more-row title = %q, want %q", lang, primary[9][1], s.OptMoreOptions)
-		}
-
-		secondary := secondaryMenuRows(s)
-		if len(secondary) != 4 {
-			t.Errorf("[%s] secondary rows = %d, want 4", lang, len(secondary))
-		}
-		wantIDs := []string{"opt_10", "opt_11", "opt_12", "opt_13"}
-		for i, r := range secondary {
-			if r[0] != wantIDs[i] {
-				t.Errorf("[%s] secondary row %d id = %q, want %q", lang, i, r[0], wantIDs[i])
-			}
-		}
-
-		// Every menu option must be reachable exactly once.
-		seen := map[string]bool{}
-		for _, r := range primary {
-			seen[r[0]] = true
-		}
-		for _, r := range secondary {
-			seen[r[0]] = true
-		}
-		for _, r := range menuRows(s) {
-			if !seen[r[0]] {
-				t.Errorf("[%s] option %q is unreachable", lang, r[0])
-			}
+		if rows[9][0] != "opt_10" || rows[9][1] != s.OptNariShakti {
+			t.Errorf("[%s] last row = %q/%q, want NariShakti", lang, rows[9][0], rows[9][1])
 		}
 	}
 }

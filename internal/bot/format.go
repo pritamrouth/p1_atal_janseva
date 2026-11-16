@@ -117,8 +117,8 @@ func formatProfile(it api.Item, fallbackName string) (text, photo string) {
 
 	var b strings.Builder
 	b.WriteString("🎖️ " + name)
-	if line := joinNonEmpty(" · ", role, party); line != "" {
-		b.WriteString("\n" + line)
+	if line := joinNonEmpty(", ", role, party); line != "" {
+		b.WriteString("\n🎖️ " + line)
 	}
 	if bio != "" && bio != name {
 		b.WriteString("\n\n" + bio)

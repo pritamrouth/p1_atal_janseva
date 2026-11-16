@@ -1,5 +1,5 @@
 // Package bot implements the Ataljanseva citizen service conversation flow:
-// preselected leader's 13-option main menu (Marathi) → sub-flows (raise
+// preselected leader's 10-option main menu (Marathi) → sub-flows (raise
 // complaint, track complaint, schedule meeting, information replies).
 // The leader is configured at startup (LEADER_ID / LEADER_SLUG) and read from
 // political_users, so citizens no longer enter a PIN code, choose a leader, or
@@ -221,7 +221,7 @@ func (h *Handler) preselectedLeader(ctx context.Context) (*db.Nagarsevak, error)
 }
 
 // ─────────────────────────────────────────────
-// Step 1 – main menu (13 options)
+// Step 1 – main menu (10 options)
 // ─────────────────────────────────────────────
 
 func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Session, ns *db.Nagarsevak) {
@@ -240,39 +240,21 @@ func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Se
 	h.sendMenuList(ctx, phone, sess)
 }
 
-// metaListMaxRows is Meta's maximum TOTAL row count for a single list
-// message across all of its sections. Exceeding it fails with API error
-// #131009 "Total row count exceed max allowed count: 10".
-const metaListMaxRows = 10
-
-// sendMenuList sends the main list: options 1–9 plus a "More Options"
-// row (Meta caps one list message at 10 rows TOTAL, and flow.txt has 13
-// options). Tapping "More Options" sends the remaining options 10–13.
+// sendMenuList sends the main list with all 10 options. This is exactly
+// Meta's maximum TOTAL row count for one list message (API error #131009
+// if exceeded), so no "More Options" row is needed.
 // On failure it retries once with a fresh context (the original ctx may be
 // nearly exhausted after the leader image upload) — losing the menu would
 // strand the user with no way to pick an option.
 func (h *Handler) sendMenuList(ctx context.Context, phone string, sess *store.Session) {
 	t := h.t(sess)
-	sections := []whatsapp.ListSection{{Title: t.SectionOne, Rows: primaryMenuRows(t)}}
+	sections := []whatsapp.ListSection{{Title: t.SectionOne, Rows: menuRows(t)}}
 
 	if err := h.sendListWithRetry(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
 		slog.Error("sendMenuList failed", "phone", phone, "err", err)
 		return
 	}
 	slog.Info("menu list sent", "phone", phone, "lang", sess.Lang, "step", sess.Step)
-}
-
-// sendMoreOptionsList sends options 10–13, shown after the user taps the
-// "More Options" row of the main menu list.
-func (h *Handler) sendMoreOptionsList(ctx context.Context, phone string, sess *store.Session) {
-	t := h.t(sess)
-	sections := []whatsapp.ListSection{{Title: t.SectionTwo, Rows: secondaryMenuRows(t)}}
-
-	if err := h.sendListWithRetry(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
-		slog.Error("sendMoreOptionsList failed", "phone", phone, "err", err)
-		return
-	}
-	slog.Info("more options list sent", "phone", phone, "lang", sess.Lang)
 }
 
 // sendListWithRetry sends one list message; if the (possibly nearly
@@ -308,26 +290,22 @@ func (h *Handler) handleMenuSelection(ctx context.Context, phone string, sess *s
 		return
 	}
 
-	if id == "opt_more" {
-		// Reveal the remaining options (10–13).
-		h.sendMoreOptionsList(ctx, phone, sess)
-		return
-	}
-
 	if !strings.HasPrefix(id, "opt_") {
 		h.sendMenuList(ctx, phone, sess)
 		return
 	}
 
 	var n int
-	if _, err := fmt.Sscanf(id, "opt_%d", &n); err != nil || n < 1 || n > 13 {
+	if _, err := fmt.Sscanf(id, "opt_%d", &n); err != nil || n < 1 || n > 10 {
+		// Includes stale rows from the retired 11–13 options: simply redraw
+		// the current menu.
 		h.sendMenuList(ctx, phone, sess)
 		return
 	}
 	h.dispatchOption(ctx, phone, sess, n)
 }
 
-// dispatchOption routes one of the 13 main-menu options.
+// dispatchOption routes one of the 10 main-menu options.
 func (h *Handler) dispatchOption(ctx context.Context, phone string, sess *store.Session, n int) {
 	t := h.t(sess)
 
@@ -356,15 +334,14 @@ func (h *Handler) dispatchOption(ctx context.Context, phone string, sess *store.
 		}
 		_ = h.wa.SendText(ctx, phone, t.MeetingPrompt)
 
-	case 4, 5, 6, 7, 8, 9, 12:
+	case 4, 5, 6, 7, 8, 9:
 		// API-backed information (About leader, Transparency Board, Work
-		// Reports, Events, Schemes, JanSeva Connect, Youth Campaigns).
+		// Reports, Events, Schemes, JanSeva Connect).
 		h.sendDynamicOption(ctx, phone, sess, n)
 		h.sendMenuList(ctx, phone, sess)
 
-	case 10, 11, 13:
-		// No matching API endpoint (NariShakti, Swadeshi, Join Our Team) —
-		// static localised text.
+	case 10:
+		// NariShakti has no matching API endpoint — static localised text.
 		h.sendInfoReply(ctx, phone, sess, n)
 		h.sendMenuList(ctx, phone, sess)
 
@@ -373,7 +350,7 @@ func (h *Handler) dispatchOption(ctx context.Context, phone string, sess *store.
 	}
 }
 
-// sendInfoReply sends the static localised text for options 4–13,
+// sendInfoReply sends the static localised text for options 4–10,
 // followed by the closing "Thank you" line.
 func (h *Handler) sendInfoReply(ctx context.Context, phone string, sess *store.Session, n int) {
 	t := h.t(sess)
@@ -395,12 +372,6 @@ func (h *Handler) sendInfoReply(ctx context.Context, phone string, sess *store.S
 		text = t.JanSevaText
 	case 10:
 		text = t.NariShaktiText
-	case 11:
-		text = t.SwadeshiText
-	case 12:
-		text = t.YouthText
-	case 13:
-		text = t.JoinTeamText
 	default:
 		return
 	}
@@ -409,7 +380,7 @@ func (h *Handler) sendInfoReply(ctx context.Context, phone string, sess *store.S
 }
 
 // ─────────────────────────────────────────────
-// API-backed info options (4–9, 12)
+// API-backed info options (4–9)
 // ─────────────────────────────────────────────
 
 // sendDynamicOption sends the API-backed content for one menu option,
@@ -475,10 +446,6 @@ func (h *Handler) dynamicOption(ctx context.Context, sess *store.Session, n int)
 
 	case 9:
 		return h.listOption(ctx, sess, t.JanSevaHeader, "/api/local-services/public",
-			limitQuery(), formatInfoItem)
-
-	case 12:
-		return h.listOption(ctx, sess, t.YouthHeader, "/api/campaigns/public",
 			limitQuery(), formatInfoItem)
 	}
 	return "", "", fmt.Errorf("option %d has no API-backed content", n)
@@ -808,7 +775,8 @@ func displayName(lang string, ns db.Nagarsevak) string {
 	return ns.FullName
 }
 
-// menuRows builds the 13 main-menu rows in the session language.
+// menuRows builds the 10 main-menu rows in the session language.
+// 10 is exactly Meta's per-list row limit, so all options are shown at once.
 func menuRows(t Strings) [][3]string {
 	return [][3]string{
 		{"opt_1", t.OptRaiseComplaint, ""},
@@ -821,25 +789,7 @@ func menuRows(t Strings) [][3]string {
 		{"opt_8", t.OptSchemes, ""},
 		{"opt_9", t.OptJanSeva, ""},
 		{"opt_10", t.OptNariShakti, ""},
-		{"opt_11", t.OptSwadeshi, ""},
-		{"opt_12", t.OptYouth, ""},
-		{"opt_13", t.OptJoinTeam, ""},
 	}
-}
-
-// primaryMenuRows returns what fits in the ONE main list message:
-// options 1–9 plus the "More Options" row (10 rows = Meta's hard limit).
-func primaryMenuRows(t Strings) [][3]string {
-	rows := menuRows(t)
-	primary := make([][3]string, 0, metaListMaxRows)
-	primary = append(primary, rows[:9]...)
-	primary = append(primary, [3]string{"opt_more", t.OptMoreOptions, ""})
-	return primary
-}
-
-// secondaryMenuRows returns the options revealed by "More Options": 10–13.
-func secondaryMenuRows(t Strings) [][3]string {
-	return menuRows(t)[9:]
 }
 
 func listID(ir *whatsapp.InteractiveReply) string {

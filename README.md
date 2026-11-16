@@ -10,12 +10,12 @@ conversation flow defined in `flow.txt`.
 ```
 Any first message
         ↓
-Preselected leader's e-Office main menu       ← leader photo + 13-option list (Marathi)
+Preselected leader's e-Office main menu       ← leader photo + 10-option list (Marathi)
         ├── 1  Raise complaint      → free-text details → POST /api/grievances → Ticket ID
         ├── 2  Track complaint      → Ticket ID → GET track/ticket → in progress / resolved / invalid
         ├── 3  Schedule meeting     → name/date/reason → free slots → POST book → confirmation
-        ├── 4–9, 12 Info replies    → live AtalJanseva API listings, static text as fallback
-        └── 10, 11, 13 Info replies → localised text + closing note, menu re-shown
+        ├── 4–9 Info replies        → live AtalJanseva API listings, static text as fallback
+        └── 10 NariShakti           → localised text + closing note, menu re-shown
 ```
 
 The language picker, PIN-code and leader-selection steps are skipped. The
@@ -27,12 +27,12 @@ e-Office in **Marathi**.
   strings remain in `i18n.go` for older in-flight sessions.
 - Complaints, tracking, appointments and the info listings come from the
   public **AtalJanseva REST API** (`ATALJANSEVA_API_BASE_URL`, no auth).
-  When the API fails or returns nothing, options 4–9 and 12 fall back to
+  When the API fails or returns nothing, options 4–9 fall back to
   the static `flow.txt` text.
-- The menu is ONE WhatsApp list with options **1–9 plus a "More Options
-  (10-13)" row** — Meta caps the **total** row count of a list message at 10
-  (API error `#131009`), not 10 per section. Tapping "More Options" reveals
-  options 10–13 in a second list.
+- The menu is ONE WhatsApp list with all **10 options** (Meta caps the
+  **total** row count of a list message at 10, API error `#131009`).
+  NariShakti is option 10; the former options 11–13 (Swadeshi, Youth
+  Engagement, Join Our Team) have been removed.
 - Typing `reset` at any point restarts the conversation.
 - Sessions expire silently after 90 s of inactivity; sessions that reached the
   main menu are persisted to `citizen_ivr` via `upsert_citizen_ivr`. Because no
@@ -105,7 +105,7 @@ the AtalJanseva API.
 
 ## AtalJanseva API
 
-Grievances, tracking, appointments and info listings (menu options 1–9, 12)
+Grievances, tracking, appointments and info listings (menu options 1–9)
 call the public REST API documented in `data/api.txt`:
 
 | Menu option | Endpoint |
@@ -119,12 +119,10 @@ call the public REST API documented in `data/api.txt`:
 | 7 Events | `GET /api/events/public` |
 | 8 Schemes | `GET /api/programs/public` |
 | 9 JanSeva Connect | `GET /api/local-services/public` |
-| 12 Youth campaigns | `GET /api/campaigns/public` |
 
-Options 10 (NariShakti), 11 (Swadeshi) and 13 (Join Our Team) have no
-matching endpoint and send static localised text. Listing responses are
-parsed defensively (up to 5 items); on any API error the static `flow.txt`
-text is sent instead.
+Option 10 (NariShakti) has no matching endpoint and sends static localised
+text. Listing responses are parsed defensively (up to 5 items); on any API
+error the static `flow.txt` text is sent instead.
 
 ## Endpoints
 

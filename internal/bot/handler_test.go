@@ -39,16 +39,18 @@ func TestHandleMenuSelectionIgnoresStaleSlot(t *testing.T) {
 	}
 }
 
-func TestHandleMenuSelectionMoreOptionsStillSendsList(t *testing.T) {
+func TestHandleMenuSelectionRetiredOptionRedrawsMenu(t *testing.T) {
 	m := &recordingMessenger{}
 	h := &Handler{wa: m}
 	sess := &store.Session{Step: store.StepMainMenu, Lang: defaultLang}
 
+	// A stale row from the retired 11–13 options must not be dispatched;
+	// the handler simply redraws the current 10-option menu.
 	h.handleMenuSelection(context.Background(), "919000000000", sess, &whatsapp.InteractiveReply{
-		ListReply: &whatsapp.ListReplyData{ID: "opt_more"},
+		ListReply: &whatsapp.ListReplyData{ID: "opt_11"},
 	})
 
 	if m.lists != 1 {
-		t.Fatalf("more-options selection sent %d lists, want 1", m.lists)
+		t.Fatalf("retired option selection sent %d lists, want 1", m.lists)
 	}
 }

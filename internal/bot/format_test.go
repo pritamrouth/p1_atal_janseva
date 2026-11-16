@@ -97,8 +97,8 @@ func TestFormatProfile(t *testing.T) {
 		"bio":         "Serving the ward since 2010",
 		"photoUrl":    "https://cdn/x.jpg",
 	}, "Fallback")
-	if !strings.Contains(text, "Ashok Shelke") ||
-		!strings.Contains(text, "Corporator · BJP") ||
+	if !strings.Contains(text, "🎖️ Ashok Shelke") ||
+		!strings.Contains(text, "🎖️ Corporator, BJP") ||
 		!strings.Contains(text, "Serving the ward since 2010") {
 		t.Errorf("profile text = %q", text)
 	}

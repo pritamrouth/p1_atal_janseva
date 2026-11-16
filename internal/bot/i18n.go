@@ -10,8 +10,6 @@ type Strings struct {
 	MenuInstruction string
 	MenuButton      string // list button label
 	SectionOne      string
-	SectionTwo      string
-	OptMoreOptions  string // "More options" row revealing the rest of the menu
 
 	// Option labels (menu rows)
 	OptRaiseComplaint  string
@@ -24,9 +22,6 @@ type Strings struct {
 	OptSchemes         string
 	OptJanSeva         string
 	OptNariShakti      string
-	OptSwadeshi        string
-	OptYouth           string
-	OptJoinTeam        string
 
 	// Complaint sub-flow
 	ComplaintPrompt  string
@@ -53,7 +48,7 @@ type Strings struct {
 	ComplaintFailed string
 	TrackFailed     string
 
-	// Info replies (options 4–13)
+	// Info replies (options 4–10)
 	AboutLeaderText  string // %[1]s = leader name
 	TransparencyText string
 	WorkReportsText  string
@@ -61,19 +56,15 @@ type Strings struct {
 	SchemesText      string
 	JanSevaText      string
 	NariShaktiText   string
-	SwadeshiText     string
-	YouthText        string
-	JoinTeamText     string
 	ThankYou         string
 	InfoMoreLink     string // footer appended to API-backed listings
 
-	// Headers for API-backed listings (options 4–9, 12)
+	// Headers for API-backed listings (options 4–9)
 	TransparencyHeader string
 	WorkReportsHeader  string
 	EventsHeader       string
 	SchemesHeader      string
 	JanSevaHeader      string
-	YouthHeader        string
 }
 
 // I18n maps a language code to its Strings. The live flow always uses
@@ -83,12 +74,10 @@ var I18n = map[string]Strings{
 		LeaderUnavailable: `Sorry, we couldn't connect you to the leader's office right now.
 Please try again in a moment.`,
 
-		MenuHeading:     "🎖️ *%[1]s*\n🎖️ BJP\n\nWelcome to the E-Office",
+		MenuHeading:     "🎖️ *%[1]s*\n🎖️ MLA, Minister of State, Guardian Minister, Bharatiya Janata Party (BJP)\n\nWelcome to the E-Office",
 		MenuInstruction: "Select Option 👇",
 		MenuButton:      "Select Option",
 		SectionOne:      "Services",
-		SectionTwo:      "More Services",
-		OptMoreOptions:  "More Options (10-13)",
 
 		OptRaiseComplaint:  "Raise Complaint",
 		OptTrackComplaint:  "Track Complaint",
@@ -100,20 +89,21 @@ Please try again in a moment.`,
 		OptSchemes:         "Schemes & Services",
 		OptJanSeva:         "JanSeva Connect",
 		OptNariShakti:      "NariShakti",
-		OptSwadeshi:        "Swadeshi - Made in India",
-		OptYouth:           "Youth Engagement Campaign",
-		OptJoinTeam:        "Join Our Team",
 
-		ComplaintPrompt: `To raise your complaint, please send your details in this format:
-
+		ComplaintPrompt: `You can raise your complaint by typing ⌨️ or sending a 🎤 voice message.
+To raise your complaint, please send your details in this format:
 Enter your full name:
+
 Describe your complaint:
+
 Enter the address or share the location where this complaint occurred:
 
 Example:
-Enter your full name: Amit Sharma
-Describe your complaint: Garbage not collected in our area since 3 days
-Enter the address or share the location where this complaint occurred: Near Hanuman Mandir, Jintur`,
+Amit Sharma
+
+Garbage not collected in our area since 3 days
+
+Hanuman Chowk, near Vitthal Rukmini Temple, Jintur`,
 
 		InvalidDetails: `We couldn't understand the details you sent.
 
@@ -126,26 +116,38 @@ You can use this ID to track your complaint status. Thank you!`,
 		ComplaintFailed: `Sorry, we couldn't submit your complaint right now.
 Please try again in a moment.`,
 
-		TrackPrompt: `To track your complaint, please enter your Ticket ID:`,
+		TrackPrompt: `To track your complaint, please enter your Ticket ID:
+
+Example:
+Ticket ID: TKT4821907`,
 		TrackInProgress: `Ticket ID: *%s*
 
-Your complaint is in progress.`,
+Your complaint is in progress. Thank you!`,
 		TrackResolved: `Ticket ID: *%s*
 
-Your complaint has been resolved.`,
+Your complaint has been resolved. Thank you!`,
 		TrackInvalid: `Invalid Ticket ID.
 Please check and enter the correct Ticket ID.`,
 		TrackFailed: `We couldn't fetch your complaint status right now.
 Please try again later.`,
 
-		MeetingPrompt: `To schedule a meeting, please share your details in this format:
+		MeetingPrompt: `To schedule a meeting, please share your details in the format below:
 
 Full Name:
-Preferred Date (DD-MM-YYYY):
-Reason for Appointment:`,
+
+Appointment Date (DD-MM-YYYY):
+
+Reason for Appointment:
+
+Example:
+Rahul Patil
+
+20-11-2026
+
+Complaint regarding water supply`,
 
 		MeetingSlots:   `Please choose from the available slots:`,
-		MeetingSuccess: `Your appointment has been scheduled successfully.`,
+		MeetingSuccess: `Your appointment has been scheduled successfully. Thank you!`,
 		MeetingNoSlots: `All slots for this date are already booked. Please choose another date.`,
 		MeetingSlotTaken: `That time slot was just booked by someone else.
 Please choose another available time.`,
@@ -170,15 +172,6 @@ To know more about JanSeva Connect, please visit: ataljanseva.in`,
 		NariShaktiText: `NariShakti focuses on women's financial independence.
 With this feature, women can offer or explore local services, find job opportunities, and grow their business. To know more about NariShakti, visit: ataljanseva.in`,
 
-		SwadeshiText: `Support Swadeshi, Support India!
-Buy and Sell Made-in-India products on ataljanseva.in, grow your business and make our nation Atmanirbhar!`,
-
-		YouthText: `Youth Engagement Campaigns
-A social initiative where leaders and citizens come together to work for the betterment of society, creating a positive impact that benefits everyone.
-To know more about Social Campaigns, visit: ataljanseva.in`,
-
-		JoinTeamText: `To become a part of our team, please visit ataljanseva.in and apply now.`,
-
 		ThankYou: `Thank you for staying connected with the *Ataljanseva Citizen Service*!!`,
 
 		InfoMoreLink: `For more details, please visit: ataljanseva.in`,
@@ -188,19 +181,16 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		EventsHeader:       `Upcoming events & meetings:`,
 		SchemesHeader:      `Government schemes & services:`,
 		JanSevaHeader:      `Local services near you:`,
-		YouthHeader:        `Latest social campaigns:`,
 	},
 
 	"mr": {
 		LeaderUnavailable: `क्षमस्व, आत्ता आपल्याला नेत्यांच्या कार्यालयाशी जोडता आले नाही.
 कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
 
-		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\nई-ऑफिसमध्ये आपले स्वागत आहे",
+		MenuHeading:     "🎖️ *%[1]s*\n🎖️ आमदार, राज्यमंत्री, पालकमंत्री, भारतीय जनता पक्ष (भाजपा)\n\nई-ऑफिसमध्ये आपले स्वागत आहे",
 		MenuInstruction: "पर्याय निवडा 👇",
 		MenuButton:      "पर्याय निवडा",
 		SectionOne:      "सेवा",
-		SectionTwo:      "अधिक सेवा",
-		OptMoreOptions:  "अधिक पर्याय (10-13)",
 
 		OptRaiseComplaint:  "तक्रार नोंदवा",
 		OptTrackComplaint:  "तक्रारीची स्थिती तपासा",
@@ -212,19 +202,21 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		OptSchemes:         "योजना आणि सेवा",
 		OptJanSeva:         "जनसेवा कनेक्ट",
 		OptNariShakti:      "नारीशक्ती",
-		OptSwadeshi:        "स्वदेशी - मेड इन इंडिया",
-		OptYouth:           "युवा सहभाग मोहीम",
-		OptJoinTeam:        "आमच्या टीममध्ये सामील व्हा",
 
-		ComplaintPrompt: `आपली तक्रार नोंदवण्यासाठी, कृपया आपली माहिती या फॉरमॅटमध्ये पाठवा:
+		ComplaintPrompt: `आपण ⌨️ टाइप करून किंवा 🎤 व्हॉइस मेसेजद्वारे आपली तक्रार नोंदवू शकता.
+आपली तक्रार नोंदवण्यासाठी, कृपया आपली माहिती या फॉरमॅटमध्ये पाठवा:
 आपले पूर्ण नाव टाका:
+
 आपल्या तक्रारीचे वर्णन करा:
-जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेयर करा:
+
+जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेअर करा:
 
 उदाहरण:
-आपले पूर्ण नाव टाका: अमित शर्मा
-आपल्या तक्रारीचे वर्णन करा: आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही
-जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेयर करा: हनुमान मंदिराजवळ, जिंतूर`,
+अमित शर्मा
+
+आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही
+
+हनुमान चौक, विठ्ठल रुक्मिणी मंदिराजवळ, जिंतूर`,
 
 		InvalidDetails: `आपण पाठवलेली माहिती समजण्यात आली नाही.
 
@@ -237,25 +229,38 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		ComplaintFailed: `क्षमस्व, आपली तक्रार आत्ता सादर करता आली नाही.
 कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
 
-		TrackPrompt: `आपल्या तक्रारीचा मागोवा घेण्यासाठी, कृपया आपला तिकीट ID टाका:`,
+		TrackPrompt: `आपल्या तक्रारीचा मागोवा घेण्यासाठी, कृपया आपला तिकीट ID टाका:
+
+उदाहरण:
+तिकीट ID: TKT4821907`,
 		TrackInProgress: `तिकीट ID: *%s*
 
-आपल्या तक्रारीवर काम सुरू आहे.`,
+आपल्या तक्रारीवर काम सुरू आहे. धन्यवाद!`,
 		TrackResolved: `तिकीट ID: *%s*
 
-आपल्या तक्रारीचे निराकरण झाले आहे.`,
+आपल्या तक्रारीचे निराकरण झाले आहे. धन्यवाद!`,
 		TrackInvalid: `अवैध तिकीट ID
 कृपया योग्य तिकीट ID तपासून पुन्हा टाका`,
 		TrackFailed: `आपल्या तक्रारीची स्थिती आत्ता मिळवता आली नाही.
 कृपया नंतर पुन्हा प्रयत्न करा.`,
 
-		MeetingPrompt: `भेट निश्चित करण्यासाठी, कृपया आपली माहिती या स्वरूपात शेअर करा:
+		MeetingPrompt: `भेट निश्चित करण्यासाठी, कृपया आपली माहिती खालील स्वरूपात शेअर करा:
+
 पूर्ण नाव:
-पसंतीची तारीख (DD-MM-YYYY):
-भेटीचे कारण:`,
+
+भेटीची तारीख (DD-MM-YYYY):
+
+भेटीचे कारण:
+
+उदाहरण:
+राहुल पाटील
+
+20-11-2026
+
+पाणीपुरवठ्याबाबत तक्रार`,
 
 		MeetingSlots:   `कृपया उपलब्ध वेळांमधून निवडा:`,
-		MeetingSuccess: `आपली भेट यशस्वीरित्या निश्चित करण्यात आली आहे.`,
+		MeetingSuccess: `आपली भेट यशस्वीरित्या निश्चित करण्यात आली आहे. धन्यवाद!`,
 		MeetingNoSlots: `या तारखेच्या सर्व वेळा भरून गेल्या आहेत. कृपया दुसरी तारीख निवडा.`,
 		MeetingSlotTaken: `ही वेळ आधीच भरली आहे.
 कृपया उपलब्ध दुसरी वेळ निवडा.`,
@@ -280,15 +285,6 @@ To know more about Social Campaigns, visit: ataljanseva.in`,
 		NariShaktiText: `नारीशक्ती महिलांच्या आर्थिक स्वावलंबनावर लक्ष केंद्रित करते.
 या सुविधेद्वारे महिला स्थानिक सेवा देऊ किंवा घेऊ शकतात, नोकरीच्या संधी शोधू शकतात आणि आपला व्यवसाय वाढवू शकतात. नारीशक्ती बद्दल अधिक जाणून घेण्यासाठी भेट द्या: ataljanseva.in`,
 
-		SwadeshiText: `स्वदेशीला पाठिंबा द्या, भारताला पाठिंबा द्या!
-ataljanseva.in वर Made-in-India उत्पादने खरेदी आणि विक्री करा, आपला व्यवसाय वाढवा आणि आपला देश आत्मनिर्भर बनवा!`,
-
-		YouthText: `युवा सहभाग मोहीम
-एक सामाजिक उपक्रम जिथे नेते आणि नागरिक समाजाच्या हितासाठी एकत्र येऊन काम करतात, सकारात्मक बदल घडवतात ज्याचा फायदा सर्वांना होतो.
-सामाजिक मोहिमांबद्दल अधिक जाणून घेण्यासाठी भेट द्या: ataljanseva.in`,
-
-		JoinTeamText: `आमच्या टीमचा भाग होण्यासाठी, कृपया ataljanseva.in ला भेट द्या आणि आत्ताच अर्ज करा.`,
-
 		ThankYou: `*अटलजनसेवा नागरिक सेवेशी* जोडलेले राहिल्याबद्दल धन्यवाद !!`,
 
 		InfoMoreLink: `अधिक माहितीसाठी, कृपया भेट द्या: ataljanseva.in`,
@@ -298,19 +294,16 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		EventsHeader:       `आगामी कार्यक्रम आणि बैठका:`,
 		SchemesHeader:      `सरकारी योजना आणि सेवा:`,
 		JanSevaHeader:      `जवळच्या स्थानिक सेवा:`,
-		YouthHeader:        `नवीनतम सामाजिक मोहिमा:`,
 	},
 
 	"hi": {
 		LeaderUnavailable: `क्षमा करें, अभी आपको नेता जी के कार्यालय से नहीं जोड़ा जा सका।
 कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
 
-		MenuHeading:     "🎖️ *%[1]s*\n🎖️ भाजपा\n\nई-ऑफिस में आपका स्वागत है",
+		MenuHeading:     "🎖️ *%[1]s*\n🎖️ विधायक, राज्य मंत्री, पालक मंत्री, भारतीय जनता पक्ष (भाजपा)\n\nई-ऑफिस में आपका स्वागत है",
 		MenuInstruction: "विकल्प चुनें 👇",
 		MenuButton:      "विकल्प चुनें",
 		SectionOne:      "सेवाएं",
-		SectionTwo:      "अधिक सेवाएं",
-		OptMoreOptions:  "अधिक विकल्प (10-13)",
 
 		OptRaiseComplaint:  "शिकायत दर्ज करें",
 		OptTrackComplaint:  "शिकायत की स्थिति देखें",
@@ -322,19 +315,21 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		OptSchemes:         "योजनाएं और सेवाएं",
 		OptJanSeva:         "जनसेवा कनेक्ट",
 		OptNariShakti:      "नारीशक्ति",
-		OptSwadeshi:        "स्वदेशी - मेड इन इंडिया",
-		OptYouth:           "युवा सहभाग अभियान",
-		OptJoinTeam:        "हमारी टीम से जुड़ें",
 
-		ComplaintPrompt: `अपनी शिकायत दर्ज करने के लिए, कृपया अपना विवरण इस फॉर्मेट में भेजें:
+		ComplaintPrompt: `आप ⌨️ टाइप करके या 🎤 वॉइस मैसेज द्वारा अपनी शिकायत दर्ज कर सकते हैं।
+अपनी शिकायत दर्ज करने के लिए, कृपया अपना विवरण इस फॉर्मेट में भेजें:
 अपना पूरा नाम दर्ज करें:
+
 अपनी शिकायत का वर्णन करें:
+
 वह पता दर्ज करें या लोकेशन शेयर करें जहाँ यह शिकायत हुई है:
 
 उदाहरण:
-अपना पूरा नाम दर्ज करें: अमित शर्मा
-अपनी शिकायत का वर्णन करें: हमारे इलाके में पिछले 3 दिनों से कचरा नहीं उठाया गया है
-वह पता दर्ज करें या लोकेशन शेयर करें जहाँ यह शिकायत हुई है: हनुमान मंदिर के पास, जिंतूर`,
+अमित शर्मा
+
+हमारे इलाके में पिछले 3 दिनों से कचरा नहीं उठाया गया है
+
+हनुमान चौक, विठ्ठल रुक्मिणी मंदिर के पास, जिंतूर`,
 
 		InvalidDetails: `हम आपके द्वारा भेजी गई जानकारी को समझ नहीं सके।
 
@@ -347,25 +342,38 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		ComplaintFailed: `क्षमा करें, आपकी शिकायत अभी दर्ज नहीं हो सकी।
 कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
 
-		TrackPrompt: `अपनी शिकायत को ट्रैक करने के लिए, कृपया अपना टिकट ID दर्ज करें:`,
+		TrackPrompt: `अपनी शिकायत को ट्रैक करने के लिए, कृपया अपना टिकट ID दर्ज करें:
+
+उदाहरण:
+टिकट ID: TKT4821907`,
 		TrackInProgress: `टिकट ID: *%s*
 
-आपकी शिकायत पर काम चल रहा है।`,
+आपकी शिकायत पर काम चल रहा है। धन्यवाद!`,
 		TrackResolved: `टिकट ID: *%s*
 
-आपकी शिकायत का समाधान हो गया है।`,
+आपकी शिकायत का समाधान हो गया है। धन्यवाद!`,
 		TrackInvalid: `अमान्य टिकट ID।
 कृपया सही टिकट ID जाँच कर दर्ज करें।`,
 		TrackFailed: `हम अभी आपकी शिकायत की स्थिति प्राप्त नहीं कर सके।
 कृपया बाद में पुनः प्रयास करें।`,
 
-		MeetingPrompt: `मीटिंग तय करने के लिए, कृपया अपनी जानकारी इस फॉर्मेट में साझा करें:
+		MeetingPrompt: `मीटिंग तय करने के लिए, कृपया अपनी जानकारी नीचे दिए गए प्रारूप में साझा करें:
+
 पूरा नाम:
-पसंदीदा तारीख (DD-MM-YYYY):
-अपॉइंटमेंट का कारण:`,
+
+अपॉइंटमेंट की तारीख (DD-MM-YYYY):
+
+अपॉइंटमेंट का कारण:
+
+उदाहरण:
+राहुल पाटील
+
+20-11-2026
+
+पानी की आपूर्ति से संबंधित शिकायत`,
 
 		MeetingSlots:   `कृपया उपलब्ध समय में से चुनें:`,
-		MeetingSuccess: `आपकी अपॉइंटमेंट सफलतापूर्वक तय कर दी गई है।`,
+		MeetingSuccess: `आपकी अपॉइंटमेंट सफलतापूर्वक तय कर दी गई है। धन्यवाद!`,
 		MeetingNoSlots: `इस तारीख के सभी समय भर चुके हैं। कृपया कोई दूसरी तारीख चुनें।`,
 		MeetingSlotTaken: `यह समय पहले ही भर चुका है।
 कृपया कोई उपलब्ध दूसरा समय चुनें।`,
@@ -390,15 +398,6 @@ ataljanseva.in वर Made-in-India उत्पादने खरेदी आ
 		NariShaktiText: `नारीशक्ति महिला आर्थिक स्वतंत्रता पर केंद्रित है।
 इस फीचर के माध्यम से महिलाएं स्थानीय सेवाएं दे या ले सकती हैं, नौकरी के अवसर ढूंढ सकती हैं और अपने व्यवसाय को बढ़ा सकती हैं। नारीशक्ति के बारे में अधिक जानने के लिए देखें: ataljanseva.in`,
 
-		SwadeshiText: `स्वदेशी अपनाएं, भारत को सशक्त बनाएं!
-ataljanseva.in पर Made-in-India उत्पाद खरीदें और बेचें, अपने व्यवसाय को बढ़ाएं और हमारे राष्ट्र को आत्मनिर्भर बनाएं!`,
-
-		YouthText: `युवा सहभाग अभियान
-एक सामाजिक पहल जहाँ नेता और नागरिक समाज की बेहतरी के लिए एक साथ आते हैं, एक सकारात्मक प्रभाव बनाते हैं जिससे सभी को लाभ होता है।
-सामाजिक अभियानों के बारे में अधिक जानने के लिए देखें: ataljanseva.in`,
-
-		JoinTeamText: `हमारी टीम का हिस्सा बनने के लिए, कृपया ataljanseva.in पर जाएं और अभी आवेदन करें।`,
-
 		ThankYou: `अटलजनसेवा नागरिक सेवा से जुड़े रहने के लिए धन्यवाद !!`,
 
 		InfoMoreLink: `अधिक जानकारी के लिए, कृपया देखें: ataljanseva.in`,
@@ -408,6 +407,5 @@ ataljanseva.in पर Made-in-India उत्पाद खरीदें और
 		EventsHeader:       `आगामी कार्यक्रम और बैठकें:`,
 		SchemesHeader:      `सरकारी योजनाएं और सेवाएं:`,
 		JanSevaHeader:      `आपके पास की स्थानीय सेवाएं:`,
-		YouthHeader:        `नवीनतम सामाजिक अभियान:`,
 	},
 }
