@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -272,6 +274,92 @@ func (c *MetaClient) post(ctx context.Context, payload any) error {
 		slog.Warn("WA API 5xx, retrying", "attempt", attempt+1, "status", resp.StatusCode)
 	}
 	return fmt.Errorf("all %d attempts failed: %w", maxRetries, lastErr)
+}
+
+// ─────────────────────────────────────────────
+// Media download (inbound voice notes)
+// ─────────────────────────────────────────────
+
+// maxMediaBytes caps an inbound media download (Meta voice notes are well
+// under this; the cap protects the worker from oversized payloads).
+const maxMediaBytes = 16 << 20
+
+type mediaInfo struct {
+	URL      string `json:"url"`
+	MimeType string `json:"mime_type"`
+	FileSize int64  `json:"file_size"`
+}
+
+// DownloadMedia resolves a Meta media ID and downloads its bytes. Voice notes
+// arrive as type "audio" with an id; the Graph API first returns a short-lived
+// download URL which must also be fetched with the same bearer token.
+func (c *MetaClient) DownloadMedia(ctx context.Context, mediaID string) ([]byte, string, error) {
+	if strings.TrimSpace(mediaID) == "" {
+		return nil, "", fmt.Errorf("media: empty id")
+	}
+
+	infoURL := fmt.Sprintf("%s/%s", c.baseURL, url.PathEscape(mediaID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, infoURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("media %s: new info request: %w", mediaID, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.accessToken)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("media %s: info request: %w", mediaID, err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		resp.Body.Close()
+		return nil, "", fmt.Errorf("media %s: info HTTP %d: %s",
+			mediaID, resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var info mediaInfo
+	decodeErr := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&info)
+	resp.Body.Close()
+	if decodeErr != nil {
+		return nil, "", fmt.Errorf("media %s: decode info: %w", mediaID, decodeErr)
+	}
+	if info.URL == "" {
+		return nil, "", fmt.Errorf("media %s: empty download URL", mediaID)
+	}
+	if info.FileSize > maxMediaBytes {
+		return nil, "", fmt.Errorf("media %s: too large (%d bytes)", mediaID, info.FileSize)
+	}
+
+	dlReq, err := http.NewRequestWithContext(ctx, http.MethodGet, info.URL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("media %s: new download request: %w", mediaID, err)
+	}
+	dlReq.Header.Set("Authorization", "Bearer "+c.accessToken)
+
+	dlResp, err := c.http.Do(dlReq)
+	if err != nil {
+		return nil, "", fmt.Errorf("media %s: download: %w", mediaID, err)
+	}
+	defer dlResp.Body.Close()
+
+	if dlResp.StatusCode < 200 || dlResp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(dlResp.Body, 4096))
+		return nil, "", fmt.Errorf("media %s: download HTTP %d: %s",
+			mediaID, dlResp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	data, err := io.ReadAll(io.LimitReader(dlResp.Body, maxMediaBytes+1))
+	if err != nil {
+		return nil, "", fmt.Errorf("media %s: read: %w", mediaID, err)
+	}
+	if len(data) > maxMediaBytes {
+		return nil, "", fmt.Errorf("media %s: too large (>%d bytes)", mediaID, maxMediaBytes)
+	}
+
+	mimeType := info.MimeType
+	if mimeType == "" {
+		mimeType = dlResp.Header.Get("Content-Type")
+	}
+	return data, mimeType, nil
 }
 
 func truncate(s string, max int) string {

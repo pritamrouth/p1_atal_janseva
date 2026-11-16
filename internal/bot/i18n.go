@@ -10,6 +10,7 @@ type Strings struct {
 	MenuInstruction string
 	MenuButton      string // list button label
 	SectionOne      string
+	SectionTwo      string // "More Options" page title
 
 	// Option labels (menu rows)
 	OptRaiseComplaint  string
@@ -22,11 +23,13 @@ type Strings struct {
 	OptSchemes         string
 	OptJanSeva         string
 	OptNariShakti      string
+	OptMoreOptions     string // last row on the main list
 
 	// Complaint sub-flow
-	ComplaintPrompt  string
-	InvalidDetails   string
-	ComplaintSuccess string // %s = ticket ID
+	ComplaintPrompt      string
+	InvalidDetails       string
+	ComplaintSuccess     string // %s = ticket ID
+	ComplaintAudioFailed string
 
 	// Track sub-flow
 	TrackPrompt     string
@@ -50,7 +53,7 @@ type Strings struct {
 
 	// Info replies (options 4–10)
 	AboutLeaderText  string // %[1]s = leader name
-	TransparencyText string
+	TransparencyText string // shared website redirect for options 4–10
 	WorkReportsText  string
 	EventsText       string
 	SchemesText      string
@@ -78,6 +81,7 @@ Please try again in a moment.`,
 		MenuInstruction: "Select Option 👇",
 		MenuButton:      "Select Option",
 		SectionOne:      "Services",
+		SectionTwo:      "More Services",
 
 		OptRaiseComplaint:  "Raise Complaint",
 		OptTrackComplaint:  "Track Complaint",
@@ -89,9 +93,12 @@ Please try again in a moment.`,
 		OptSchemes:         "Schemes & Services",
 		OptJanSeva:         "JanSeva Connect",
 		OptNariShakti:      "NariShakti",
+		OptMoreOptions:     "More Options",
 
 		ComplaintPrompt: `You can raise your complaint by typing ⌨️ or sending a 🎤 voice message.
-To raise your complaint, please send your details in this format:
+
+To raise your complaint, please send your details in this format.
+
 Enter your full name:
 
 Describe your complaint:
@@ -99,6 +106,7 @@ Describe your complaint:
 Enter the address or share the location where this complaint occurred:
 
 Example:
+
 Amit Sharma
 
 Garbage not collected in our area since 3 days
@@ -111,15 +119,21 @@ Please try again in the format below 👇`,
 
 		ComplaintSuccess: `Your complaint has been raised successfully!
 Your Ticket ID is: *%s*
+
 You can use this ID to track your complaint status. Thank you!`,
 
 		ComplaintFailed: `Sorry, we couldn't submit your complaint right now.
 Please try again in a moment.`,
 
-		TrackPrompt: `To track your complaint, please enter your Ticket ID:
+		ComplaintAudioFailed: `Sorry, we couldn't process your voice complaint right now.
+
+Please type your complaint details in the format below 👇`,
+
+		TrackPrompt: `To track your complaint, please enter your Ticket ID.
 
 Example:
-Ticket ID: TKT4821907`,
+
+TKT4821907`,
 		TrackInProgress: `Ticket ID: *%s*
 
 Your complaint is in progress. Thank you!`,
@@ -131,7 +145,7 @@ Please check and enter the correct Ticket ID.`,
 		TrackFailed: `We couldn't fetch your complaint status right now.
 Please try again later.`,
 
-		MeetingPrompt: `To schedule a meeting, please share your details in the format below:
+		MeetingPrompt: `To schedule a meeting, please share your details in the format below.
 
 Full Name:
 
@@ -140,6 +154,7 @@ Appointment Date (DD-MM-YYYY):
 Reason for Appointment:
 
 Example:
+
 Rahul Patil
 
 20-11-2026
@@ -191,6 +206,7 @@ With this feature, women can offer or explore local services, find job opportuni
 		MenuInstruction: "पर्याय निवडा 👇",
 		MenuButton:      "पर्याय निवडा",
 		SectionOne:      "सेवा",
+		SectionTwo:      "अधिक सेवा",
 
 		OptRaiseComplaint:  "तक्रार नोंदवा",
 		OptTrackComplaint:  "तक्रारीची स्थिती तपासा",
@@ -202,9 +218,12 @@ With this feature, women can offer or explore local services, find job opportuni
 		OptSchemes:         "योजना आणि सेवा",
 		OptJanSeva:         "जनसेवा कनेक्ट",
 		OptNariShakti:      "नारीशक्ती",
+		OptMoreOptions:     "अधिक पर्याय",
 
 		ComplaintPrompt: `आपण ⌨️ टाइप करून किंवा 🎤 व्हॉइस मेसेजद्वारे आपली तक्रार नोंदवू शकता.
-आपली तक्रार नोंदवण्यासाठी, कृपया आपली माहिती या फॉरमॅटमध्ये पाठवा:
+
+आपली तक्रार नोंदवण्यासाठी, कृपया आपली माहिती या फॉरमॅटमध्ये पाठवा.
+
 आपले पूर्ण नाव टाका:
 
 आपल्या तक्रारीचे वर्णन करा:
@@ -212,6 +231,7 @@ With this feature, women can offer or explore local services, find job opportuni
 जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेअर करा:
 
 उदाहरण:
+
 अमित शर्मा
 
 आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही
@@ -224,15 +244,21 @@ With this feature, women can offer or explore local services, find job opportuni
 
 		ComplaintSuccess: `आपली तक्रार यशस्वीरित्या नोंदवली गेली आहे!
 आपला तिकीट ID आहे: *%s*
+
 आपण या ID द्वारे आपल्या तक्रारीची स्थिती तपासू शकता। धन्यवाद!`,
 
 		ComplaintFailed: `क्षमस्व, आपली तक्रार आत्ता सादर करता आली नाही.
 कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.`,
 
-		TrackPrompt: `आपल्या तक्रारीचा मागोवा घेण्यासाठी, कृपया आपला तिकीट ID टाका:
+		ComplaintAudioFailed: `क्षमस्व, आपली व्हॉइस तक्रार आत्ता स्वीकारता आली नाही.
+
+कृपया खालील फॉरमॅटमध्ये आपली तक्रार टाइप करून पाठवा 👇`,
+
+		TrackPrompt: `आपल्या तक्रारीचा मागोवा घेण्यासाठी, कृपया आपला तिकीट ID टाका.
 
 उदाहरण:
-तिकीट ID: TKT4821907`,
+
+TKT4821907`,
 		TrackInProgress: `तिकीट ID: *%s*
 
 आपल्या तक्रारीवर काम सुरू आहे. धन्यवाद!`,
@@ -244,7 +270,7 @@ With this feature, women can offer or explore local services, find job opportuni
 		TrackFailed: `आपल्या तक्रारीची स्थिती आत्ता मिळवता आली नाही.
 कृपया नंतर पुन्हा प्रयत्न करा.`,
 
-		MeetingPrompt: `भेट निश्चित करण्यासाठी, कृपया आपली माहिती खालील स्वरूपात शेअर करा:
+		MeetingPrompt: `भेट निश्चित करण्यासाठी, कृपया आपली माहिती खालील स्वरूपात शेअर करा.
 
 पूर्ण नाव:
 
@@ -253,6 +279,7 @@ With this feature, women can offer or explore local services, find job opportuni
 भेटीचे कारण:
 
 उदाहरण:
+
 राहुल पाटील
 
 20-11-2026
@@ -304,6 +331,7 @@ With this feature, women can offer or explore local services, find job opportuni
 		MenuInstruction: "विकल्प चुनें 👇",
 		MenuButton:      "विकल्प चुनें",
 		SectionOne:      "सेवाएं",
+		SectionTwo:      "अधिक सेवाएं",
 
 		OptRaiseComplaint:  "शिकायत दर्ज करें",
 		OptTrackComplaint:  "शिकायत की स्थिति देखें",
@@ -315,9 +343,12 @@ With this feature, women can offer or explore local services, find job opportuni
 		OptSchemes:         "योजनाएं और सेवाएं",
 		OptJanSeva:         "जनसेवा कनेक्ट",
 		OptNariShakti:      "नारीशक्ति",
+		OptMoreOptions:     "अधिक विकल्प",
 
 		ComplaintPrompt: `आप ⌨️ टाइप करके या 🎤 वॉइस मैसेज द्वारा अपनी शिकायत दर्ज कर सकते हैं।
-अपनी शिकायत दर्ज करने के लिए, कृपया अपना विवरण इस फॉर्मेट में भेजें:
+
+अपनी शिकायत दर्ज करने के लिए, कृपया अपना विवरण इस फॉर्मेट में भेजें।
+
 अपना पूरा नाम दर्ज करें:
 
 अपनी शिकायत का वर्णन करें:
@@ -325,6 +356,7 @@ With this feature, women can offer or explore local services, find job opportuni
 वह पता दर्ज करें या लोकेशन शेयर करें जहाँ यह शिकायत हुई है:
 
 उदाहरण:
+
 अमित शर्मा
 
 हमारे इलाके में पिछले 3 दिनों से कचरा नहीं उठाया गया है
@@ -337,15 +369,21 @@ With this feature, women can offer or explore local services, find job opportuni
 
 		ComplaintSuccess: `आपकी शिकायत सफलतापूर्वक दर्ज कर ली गई है!
 आपका टिकट ID है: *%s*
+
 आप इस ID से अपनी शिकायत की स्थिति देख सकते हैं। धन्यवाद!`,
 
 		ComplaintFailed: `क्षमा करें, आपकी शिकायत अभी दर्ज नहीं हो सकी।
 कृपया थोड़ी देर बाद पुनः प्रयास करें।`,
 
-		TrackPrompt: `अपनी शिकायत को ट्रैक करने के लिए, कृपया अपना टिकट ID दर्ज करें:
+		ComplaintAudioFailed: `क्षमा करें, आपकी वॉइस शिकायत अभी स्वीकार नहीं की जा सकी।
+
+कृपया नीचे दिए गए प्रारूप में अपनी शिकायत टाइप करके भेजें 👇`,
+
+		TrackPrompt: `अपनी शिकायत को ट्रैक करने के लिए, कृपया अपना टिकट ID दर्ज करें।
 
 उदाहरण:
-टिकट ID: TKT4821907`,
+
+TKT4821907`,
 		TrackInProgress: `टिकट ID: *%s*
 
 आपकी शिकायत पर काम चल रहा है। धन्यवाद!`,
@@ -357,7 +395,7 @@ With this feature, women can offer or explore local services, find job opportuni
 		TrackFailed: `हम अभी आपकी शिकायत की स्थिति प्राप्त नहीं कर सके।
 कृपया बाद में पुनः प्रयास करें।`,
 
-		MeetingPrompt: `मीटिंग तय करने के लिए, कृपया अपनी जानकारी नीचे दिए गए प्रारूप में साझा करें:
+		MeetingPrompt: `मीटिंग तय करने के लिए, कृपया अपनी जानकारी नीचे दिए गए प्रारूप में साझा करें।
 
 पूरा नाम:
 
@@ -366,6 +404,7 @@ With this feature, women can offer or explore local services, find job opportuni
 अपॉइंटमेंट का कारण:
 
 उदाहरण:
+
 राहुल पाटील
 
 20-11-2026

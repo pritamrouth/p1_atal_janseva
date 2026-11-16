@@ -16,6 +16,7 @@ import (
 	"janseva_chatbot/internal/bot"
 	"janseva_chatbot/internal/db"
 	"janseva_chatbot/internal/inactivity"
+	"janseva_chatbot/internal/storage"
 	"janseva_chatbot/internal/store"
 	"janseva_chatbot/internal/whatsapp"
 	"janseva_chatbot/internal/worker"
@@ -102,6 +103,25 @@ func main() {
 		"leader_slug", cfg.LeaderSlug,
 	)
 
+	// ── AWS S3 (voice-complaint audio) ────────────────────────────────────────
+	var audioStore *storage.Uploader
+	if cfg.S3Region != "" && cfg.S3Bucket != "" {
+		audioStore, err = storage.NewS3Uploader(
+			ctx, cfg.S3Region, cfg.S3Bucket,
+			cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey,
+		)
+		if err != nil {
+			slog.Error("s3 audio uploads disabled", "err", err)
+			audioStore = nil
+		} else {
+			slog.Info("s3 audio uploads configured",
+				"bucket", cfg.S3Bucket, "region", cfg.S3Region)
+		}
+	} else {
+		slog.Warn("s3 audio uploads disabled; voice complaints will ask for text",
+			"region_set", cfg.S3Region != "", "bucket_set", cfg.S3Bucket != "")
+	}
+
 	// ── WhatsApp client (Meta Cloud API) ──────────────────────────────────────
 	messenger := whatsapp.NewMetaClient(cfg.WAPhoneNumberID, cfg.WAAccessToken, cfg.WAMessagingAccountID)
 	slog.Info("using Meta WhatsApp provider",
@@ -167,13 +187,13 @@ func main() {
 			"action", "session_cleanup_and_ivr_upsert",
 		)
 		// Bot + Worker pool
-		runServer(ctx, cfg, messenger, sessionStore, repo, inactiveMonitor, ajClient)
+		runServer(ctx, cfg, messenger, sessionStore, repo, inactiveMonitor, ajClient, audioStore)
 		return
 	}
 
 	slog.Info("inactivity monitor disabled")
 	skipMonitor := inactivity.New(rdb, func(context.Context, string, inactivity.SessionSnapshot) {})
-	runServer(ctx, cfg, messenger, sessionStore, repo, skipMonitor, ajClient)
+	runServer(ctx, cfg, messenger, sessionStore, repo, skipMonitor, ajClient, audioStore)
 }
 
 // runServer wires the bot, worker pool and HTTP server.
@@ -185,8 +205,9 @@ func runServer(
 	repo *db.Repo,
 	inactiveMonitor *inactivity.Monitor,
 	ajClient *api.Client,
+	audioStore *storage.Uploader,
 ) {
-	botHandler := bot.New(messenger, sessionStore, repo, inactiveMonitor, ajClient, cfg.LeaderID, cfg.LeaderSlug)
+	botHandler := bot.New(messenger, sessionStore, repo, inactiveMonitor, ajClient, audioStore, cfg.LeaderID, cfg.LeaderSlug)
 
 	pool := worker.New(cfg.WorkerCount, cfg.QueueDepth, botHandler.HandleRaw)
 	pool.Start()

@@ -41,6 +41,13 @@ type Config struct {
 	AtalJansevaAPIBaseURL string // empty → https://api.ataljanseva.in
 	AtalJansevaAPITimeout int    // per-request timeout in seconds
 
+	// AWS S3 for voice-complaint uploads. REGION and YOUR_BUCKET_NAME are the
+	// names used by the original .env; standard AWS names are also accepted.
+	S3Region           string
+	S3Bucket           string
+	AWSAccessKeyID     string
+	AWSSecretAccessKey string
+
 	// Preselected leader. The chatbot no longer asks citizens for a PIN code
 	// or shows a leader list; it opens this leader's e-Office directly.
 	// LEADER_ID takes precedence over LEADER_SLUG when both are set.
@@ -72,6 +79,11 @@ func Load() (*Config, error) {
 		AtalJansevaAPIBaseURL: os.Getenv("ATALJANSEVA_API_BASE_URL"),
 		AtalJansevaAPITimeout: getEnvInt("ATALJANSEVA_API_TIMEOUT", 10),
 
+		S3Region:           getEnvFirst("S3_REGION", "AWS_REGION", "REGION"),
+		S3Bucket:           getEnvFirst("S3_BUCKET", "AWS_S3_BUCKET", "YOUR_BUCKET_NAME"),
+		AWSAccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+		AWSSecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+
 		LeaderID:   os.Getenv("LEADER_ID"),
 		LeaderSlug: getEnvOr("LEADER_SLUG", "meghnabordikar"),
 	}
@@ -95,6 +107,16 @@ func getEnvOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// getEnvFirst returns the first non-empty environment variable among keys.
+func getEnvFirst(keys ...string) string {
+	for _, key := range keys {
+		if v := os.Getenv(key); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func getEnvBool(key string, def bool) bool {

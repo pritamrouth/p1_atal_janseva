@@ -82,6 +82,39 @@ func TestSendMethodsIncludeMessagingAccountID(t *testing.T) {
 	}
 }
 
+func TestDownloadMedia(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Errorf("Authorization = %q", got)
+		}
+		switch r.URL.Path {
+		case "/media-123":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"url":"` + srv.URL + `/download","mime_type":"audio/ogg; codecs=opus","file_size":4}`))
+		case "/download":
+			_, _ = w.Write([]byte("OggS"))
+		default:
+			t.Errorf("path = %q", r.URL.Path)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewMetaClient("phone-id", "test-token", "")
+	c.baseURL = srv.URL
+
+	data, mime, err := c.DownloadMedia(context.Background(), "media-123")
+	if err != nil {
+		t.Fatalf("DownloadMedia: %v", err)
+	}
+	if string(data) != "OggS" {
+		t.Errorf("data = %q", data)
+	}
+	if mime != "audio/ogg; codecs=opus" {
+		t.Errorf("mime = %q", mime)
+	}
+}
+
 func TestSendTextOmitsMessagingAccountIDWhenUnset(t *testing.T) {
 	c, bodies := newTestClient(t, "")
 

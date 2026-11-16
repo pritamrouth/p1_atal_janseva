@@ -14,4 +14,5 @@ type Messenger interface {
 	SendImage(ctx context.Context, to, imageURL, caption string) error
 	SendButtonsWithImageHeader(ctx context.Context, to, bodyText, imageURL string, buttons [][2]string) error
 	SendList(ctx context.Context, to, bodyText, buttonLabel string, sections []ListSection) error
+	DownloadMedia(ctx context.Context, mediaID string) (data []byte, mimeType string, err error)
 }

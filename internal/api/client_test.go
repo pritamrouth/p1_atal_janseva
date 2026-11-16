@@ -44,6 +44,9 @@ func TestCreateGrievance(t *testing.T) {
 		if in["mobile"] != "9876543210" {
 			t.Errorf("mobile = %v", in["mobile"])
 		}
+		if in["audio_url"] != "https://bucket.s3.ap-south-1.amazonaws.com/complaints/audio/test.ogg" {
+			t.Errorf("audio_url = %v", in["audio_url"])
+		}
 		writeJSON(w, http.StatusCreated, `{
 			"success": true,
 			"message": "Grievance submitted",
@@ -58,6 +61,7 @@ func TestCreateGrievance(t *testing.T) {
 		Mobile:       Mobile10("919876543210"),
 		Description:  "No water supply since Monday",
 		Address:      "Near Hanuman Mandir",
+		AudioURL:     "https://bucket.s3.ap-south-1.amazonaws.com/complaints/audio/test.ogg",
 	})
 	if err != nil {
 		t.Fatalf("CreateGrievance: %v", err)

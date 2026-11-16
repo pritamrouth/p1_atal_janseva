@@ -10,12 +10,12 @@ conversation flow defined in `flow.txt`.
 ```
 Any first message
         ↓
-Preselected leader's e-Office main menu       ← leader photo + 10-option list (Marathi)
-        ├── 1  Raise complaint      → free-text details → POST /api/grievances → Ticket ID
+Preselected leader's e-Office main menu       ← leader photo + 9 options + "अधिक पर्याय" (Marathi)
+        ├── 1  Raise complaint      → text details or voice note → POST /api/grievances → Ticket ID
         ├── 2  Track complaint      → Ticket ID → GET track/ticket → in progress / resolved / invalid
         ├── 3  Schedule meeting     → name/date/reason → free slots → POST book → confirmation
-        ├── 4–9 Info replies        → live AtalJanseva API listings, static text as fallback
-        └── 10 NariShakti           → localised text + closing note, menu re-shown
+        ├── 4–9 Info replies        → same website redirect (ataljanseva.in) + closing note
+        └── अधिक पर्याय             → reveals option 10 (NariShakti), which sends the same redirect
 ```
 
 The language picker, PIN-code and leader-selection steps are skipped. The
@@ -25,14 +25,16 @@ e-Office in **Marathi**.
 
 - Marathi is the default and only language in the live flow. English and Hindi
   strings remain in `i18n.go` for older in-flight sessions.
-- Complaints, tracking, appointments and the info listings come from the
-  public **AtalJanseva REST API** (`ATALJANSEVA_API_BASE_URL`, no auth).
-  When the API fails or returns nothing, options 4–9 fall back to
-  the static `flow.txt` text.
-- The menu is ONE WhatsApp list with all **10 options** (Meta caps the
-  **total** row count of a list message at 10, API error `#131009`).
-  NariShakti is option 10; the former options 11–13 (Swadeshi, Youth
-  Engagement, Join Our Team) have been removed.
+- Complaints, tracking and appointments use the public **AtalJanseva REST API**
+  (`ATALJANSEVA_API_BASE_URL`, no auth).
+- Options **4–10** all send the same static message pointing citizens to
+  `ataljanseva.in`, followed by the closing thank-you line.
+- Voice complaints are downloaded from Meta, stored in S3, and submitted to
+  `POST /api/grievances` as `audio_url`. Text complaints work unchanged.
+- The main menu is one WhatsApp list with **9 options + “अधिक पर्याय”**
+  (Meta caps the **total** row count of a list message at 10, API error
+  `#131009`). Tapping the last row reveals NariShakti (option 10). The former
+  options 11–13 (Swadeshi, Youth Engagement, Join Our Team) have been removed.
 - Typing `reset` at any point restarts the conversation.
 - Sessions expire silently after 90 s of inactivity; sessions that reached the
   main menu are persisted to `citizen_ivr` via `upsert_citizen_ivr`. Because no
@@ -82,6 +84,9 @@ same `.env` works (Plivo variables are simply ignored):
 | `ENABLE_INACTIVITY_MONITOR` | `true` | 90 s idle session expiry |
 | `ATALJANSEVA_API_BASE_URL` | `https://api.ataljanseva.in` | AtalJanseva REST API (local: `http://localhost:3000`) |
 | `ATALJANSEVA_API_TIMEOUT` | 10 | per-request API timeout (seconds) |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | – | S3 credentials for voice-note uploads |
+| `REGION` | – | S3 region (aliases: `S3_REGION`, `AWS_REGION`) |
+| `YOUR_BUCKET_NAME` | – | S3 bucket for complaint audio (alias: `S3_BUCKET`) |
 | `LEADER_ID` | – | optional – preselected leader UUID (takes precedence) |
 | `LEADER_SLUG` | `meghnabordikar` | preselected leader slug in `political_users` |
 | `PORT` / `ENV` | 8080 / development | HTTP server / JSON logs in production |
@@ -105,24 +110,17 @@ the AtalJanseva API.
 
 ## AtalJanseva API
 
-Grievances, tracking, appointments and info listings (menu options 1–9)
-call the public REST API documented in `data/api.txt`:
+Complaints, tracking and appointments (menu options 1–3) call the public REST
+API documented in `data/api.txt`:
 
 | Menu option | Endpoint |
 |---|---|
-| 1 Raise complaint | `POST /api/grievances` → ticketId (`TKT…`) |
+| 1 Raise complaint | `POST /api/grievances` → ticketId (`TKT…`); voice notes also send `audio_url` |
 | 2 Track complaint | `GET /api/grievances/track/ticket/{ticketId}` |
 | 3 Schedule meeting | `GET /api/schedule/appointments/slots` → free slots, then `POST /api/schedule/appointments/book` |
-| 4 About leader | `GET /api/political-users/slug/{slug}` |
-| 5 Transparency board | `GET /api/grievances/public/all?status=Resolved` |
-| 6 Work reports | `GET /api/work-reports/public` |
-| 7 Events | `GET /api/events/public` |
-| 8 Schemes | `GET /api/programs/public` |
-| 9 JanSeva Connect | `GET /api/local-services/public` |
 
-Option 10 (NariShakti) has no matching endpoint and sends static localised
-text. Listing responses are parsed defensively (up to 5 items); on any API
-error the static `flow.txt` text is sent instead.
+Options 4–10 do not call the API; they all send the same static website
+redirect message plus the closing thank-you line.
 
 ## Endpoints
 

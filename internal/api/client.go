@@ -172,6 +172,7 @@ func apiMessage(env envelope, raw []byte, status int) string {
 
 // GrievanceRequest is the POST /api/grievances body.
 // Category defaults to "Other" server-side; source stays unset ("online").
+// AudioURL is the public S3 URL of a voice complaint.
 type GrievanceRequest struct {
 	NagarsevakID string `json:"nagarsevakId"`
 	Name         string `json:"name"`
@@ -180,6 +181,7 @@ type GrievanceRequest struct {
 	Description  string `json:"description"`
 	Address      string `json:"address,omitempty"`
 	Ward         string `json:"ward,omitempty"`
+	AudioURL     string `json:"audio_url,omitempty"`
 }
 
 // Grievance is a grievance as returned by the API.

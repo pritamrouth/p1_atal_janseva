@@ -48,13 +48,25 @@ type Message struct {
 	From        string            `json:"from"`
 	ID          string            `json:"id"`
 	Timestamp   string            `json:"timestamp"`
-	Type        string            `json:"type"` // text | interactive | ...
+	Type        string            `json:"type"` // text | interactive | audio | ...
 	Text        *TextMessage      `json:"text,omitempty"`
 	Interactive *InteractiveReply `json:"interactive,omitempty"`
+	Audio       *AudioMessage     `json:"audio,omitempty"`
+	// ContactName is the WhatsApp profile name of the sender, filled in by
+	// Messages() from the webhook's contacts array.
+	ContactName string `json:"-"`
 }
 
 type TextMessage struct {
 	Body string `json:"body"`
+}
+
+// AudioMessage is an inbound voice note or audio attachment.
+type AudioMessage struct {
+	ID       string `json:"id"`
+	MimeType string `json:"mime_type"`
+	SHA256   string `json:"sha256"`
+	Voice    bool   `json:"voice"`
 }
 
 type InteractiveReply struct {
@@ -88,11 +100,24 @@ func ParseMeta(data []byte) (*WebhookPayload, error) {
 }
 
 // Messages returns the flat list of inbound messages across all entries/changes.
+// Each message is enriched with the sender's WhatsApp profile name so the
+// complaint flow can use it when a voice note has no typed name.
 func (p *WebhookPayload) Messages() []Message {
 	var out []Message
 	for _, e := range p.Entry {
 		for _, c := range e.Changes {
-			out = append(out, c.Value.Messages...)
+			names := make(map[string]string, len(c.Value.Contacts))
+			for _, contact := range c.Value.Contacts {
+				if contact.WaID != "" && contact.Profile.Name != "" {
+					names[contact.WaID] = contact.Profile.Name
+				}
+			}
+			for _, msg := range c.Value.Messages {
+				if msg.ContactName == "" {
+					msg.ContactName = names[msg.From]
+				}
+				out = append(out, msg)
+			}
 		}
 	}
 	return out
