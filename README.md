@@ -10,12 +10,12 @@ conversation flow defined in `flow.txt`.
 ```
 Any first message
         ↓
-Preselected leader's e-Office main menu       ← leader photo + 9 options + "अधिक पर्याय" (Marathi)
+Preselected leader's e-Office main menu       ← leader photo + all 10 options (Marathi)
         ├── 1  Raise complaint      → text details or voice note → POST /api/grievances → Ticket ID
         ├── 2  Track complaint      → Ticket ID → GET track/ticket → in progress / resolved / invalid
         ├── 3  Schedule meeting     → name/date/reason → free slots → POST book → confirmation
         ├── 4–9 Info replies        → same website redirect (ataljanseva.in) + closing note
-        └── अधिक पर्याय             → reveals option 10 (NariShakti), which sends the same redirect
+        └── 10 NariShakti            → same website redirect
 ```
 
 The language picker, PIN-code and leader-selection steps are skipped. The
@@ -31,10 +31,10 @@ e-Office in **Marathi**.
   `ataljanseva.in`, followed by the closing thank-you line.
 - Voice complaints are downloaded from Meta, stored in S3, and submitted to
   `POST /api/grievances` as `audio_url`. Text complaints work unchanged.
-- The main menu is one WhatsApp list with **9 options + “अधिक पर्याय”**
-  (Meta caps the **total** row count of a list message at 10, API error
-  `#131009`). Tapping the last row reveals NariShakti (option 10). The former
-  options 11–13 (Swadeshi, Youth Engagement, Join Our Team) have been removed.
+- The main menu is one WhatsApp list with all **10 options**, including
+  NariShakti. This is Meta's maximum total row count per list message
+  (`#131009` if exceeded). The former options 11–13 (Swadeshi, Youth
+  Engagement, Join Our Team) have been removed.
 - Typing `reset` at any point restarts the conversation.
 - Sessions expire silently after 90 s of inactivity; sessions that reached the
   main menu are persisted to `citizen_ivr` via `upsert_citizen_ivr`. Because no

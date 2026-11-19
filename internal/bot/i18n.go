@@ -10,7 +10,6 @@ type Strings struct {
 	MenuInstruction string
 	MenuButton      string // list button label
 	SectionOne      string
-	SectionTwo      string // "More Options" page title
 
 	// Option labels (menu rows)
 	OptRaiseComplaint  string
@@ -23,7 +22,6 @@ type Strings struct {
 	OptSchemes         string
 	OptJanSeva         string
 	OptNariShakti      string
-	OptMoreOptions     string // last row on the main list
 
 	// Complaint sub-flow
 	ComplaintPrompt      string
@@ -81,7 +79,6 @@ Please try again in a moment.`,
 		MenuInstruction: "Select Option 👇",
 		MenuButton:      "Select Option",
 		SectionOne:      "Services",
-		SectionTwo:      "More Services",
 
 		OptRaiseComplaint:  "Raise Complaint",
 		OptTrackComplaint:  "Track Complaint",
@@ -93,7 +90,6 @@ Please try again in a moment.`,
 		OptSchemes:         "Schemes & Services",
 		OptJanSeva:         "JanSeva Connect",
 		OptNariShakti:      "NariShakti",
-		OptMoreOptions:     "More Options",
 
 		ComplaintPrompt: `You can raise your complaint by typing ⌨️ or sending a 🎤 voice message.
 
@@ -206,7 +202,6 @@ With this feature, women can offer or explore local services, find job opportuni
 		MenuInstruction: "पर्याय निवडा 👇",
 		MenuButton:      "पर्याय निवडा",
 		SectionOne:      "सेवा",
-		SectionTwo:      "अधिक सेवा",
 
 		OptRaiseComplaint:  "तक्रार नोंदवा",
 		OptTrackComplaint:  "तक्रारीची स्थिती तपासा",
@@ -218,7 +213,6 @@ With this feature, women can offer or explore local services, find job opportuni
 		OptSchemes:         "योजना आणि सेवा",
 		OptJanSeva:         "जनसेवा कनेक्ट",
 		OptNariShakti:      "नारीशक्ती",
-		OptMoreOptions:     "अधिक पर्याय",
 
 		ComplaintPrompt: `आपण ⌨️ टाइप करून किंवा 🎤 व्हॉइस मेसेजद्वारे आपली तक्रार नोंदवू शकता.
 
@@ -298,7 +292,7 @@ TKT4821907`,
 
 		AboutLeaderText: `%s यांच्याबद्दल अधिक माहितीसाठी, कृपया भेट द्या: ataljanseva.in`,
 
-		TransparencyText: `पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in`,
+		TransparencyText: `नेत्याबद्दल माहिती, पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती, योजना आणि सेवा, जनसेवा कनेक्ट, नारीशक्ती, आणि अधिक पर्याय पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in`,
 
 		WorkReportsText: `पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in`,
 
@@ -312,7 +306,7 @@ TKT4821907`,
 		NariShaktiText: `नारीशक्ती महिलांच्या आर्थिक स्वावलंबनावर लक्ष केंद्रित करते.
 या सुविधेद्वारे महिला स्थानिक सेवा देऊ किंवा घेऊ शकतात, नोकरीच्या संधी शोधू शकतात आणि आपला व्यवसाय वाढवू शकतात. नारीशक्ती बद्दल अधिक जाणून घेण्यासाठी भेट द्या: ataljanseva.in`,
 
-		ThankYou: `*अटलजनसेवा नागरिक सेवेशी* जोडलेले राहिल्याबद्दल धन्यवाद !!`,
+		ThankYou: `अटलजनसेवा नागरिक सेवेशी जोडलेले राहिल्याबद्दल धन्यवाद !!`,
 
 		InfoMoreLink: `अधिक माहितीसाठी, कृपया भेट द्या: ataljanseva.in`,
 
@@ -331,7 +325,6 @@ TKT4821907`,
 		MenuInstruction: "विकल्प चुनें 👇",
 		MenuButton:      "विकल्प चुनें",
 		SectionOne:      "सेवाएं",
-		SectionTwo:      "अधिक सेवाएं",
 
 		OptRaiseComplaint:  "शिकायत दर्ज करें",
 		OptTrackComplaint:  "शिकायत की स्थिति देखें",
@@ -343,7 +336,6 @@ TKT4821907`,
 		OptSchemes:         "योजनाएं और सेवाएं",
 		OptJanSeva:         "जनसेवा कनेक्ट",
 		OptNariShakti:      "नारीशक्ति",
-		OptMoreOptions:     "अधिक विकल्प",
 
 		ComplaintPrompt: `आप ⌨️ टाइप करके या 🎤 वॉइस मैसेज द्वारा अपनी शिकायत दर्ज कर सकते हैं।
 

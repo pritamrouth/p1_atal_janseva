@@ -259,34 +259,20 @@ func (h *Handler) sendMainMenu(ctx context.Context, phone string, sess *store.Se
 // #131009 "Total row count exceed max allowed count: 10".
 const metaListMaxRows = 10
 
-// sendMenuList sends the main list: options 1–9 plus a "More Options" row.
-// Meta caps one list message at 10 rows TOTAL, so the last option (NariShakti)
-// is shown after tapping "More Options".
+// sendMenuList sends all 10 menu options in one list. Meta caps one list
+// message at 10 rows TOTAL.
 // On failure it retries once with a fresh context (the original ctx may be
 // nearly exhausted after the leader image upload) — losing the menu would
 // strand the user with no way to pick an option.
 func (h *Handler) sendMenuList(ctx context.Context, phone string, sess *store.Session) {
 	t := h.t(sess)
-	sections := []whatsapp.ListSection{{Title: t.SectionOne, Rows: primaryMenuRows(t)}}
+	sections := []whatsapp.ListSection{{Title: t.SectionOne, Rows: menuRows(t)}}
 
 	if err := h.sendListWithRetry(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
 		slog.Error("sendMenuList failed", "phone", phone, "err", err)
 		return
 	}
 	slog.Info("menu list sent", "phone", phone, "lang", sess.Lang, "step", sess.Step)
-}
-
-// sendMoreOptionsList sends option 10, shown after the user taps the
-// "More Options" row of the main menu list.
-func (h *Handler) sendMoreOptionsList(ctx context.Context, phone string, sess *store.Session) {
-	t := h.t(sess)
-	sections := []whatsapp.ListSection{{Title: t.SectionTwo, Rows: secondaryMenuRows(t)}}
-
-	if err := h.sendListWithRetry(ctx, phone, t.MenuInstruction, t.MenuButton, sections); err != nil {
-		slog.Error("sendMoreOptionsList failed", "phone", phone, "err", err)
-		return
-	}
-	slog.Info("more options list sent", "phone", phone, "lang", sess.Lang)
 }
 
 // sendListWithRetry sends one list message; if the (possibly nearly
@@ -319,12 +305,6 @@ func (h *Handler) handleMenuSelection(ctx context.Context, phone string, sess *s
 		// already booked; the booking flow already sent the menu, so sending
 		// it again would duplicate it.
 		slog.Info("stale slot selection ignored", "phone", phone, "row_id", id)
-		return
-	}
-
-	if id == "opt_more" {
-		// Reveal the remaining option(s) that do not fit in the 10-row list.
-		h.sendMoreOptionsList(ctx, phone, sess)
 		return
 	}
 
@@ -770,21 +750,6 @@ func menuRows(t Strings) [][3]string {
 		{"opt_9", t.OptJanSeva, ""},
 		{"opt_10", t.OptNariShakti, ""},
 	}
-}
-
-// primaryMenuRows returns what fits in the ONE main list message:
-// options 1–9 plus the "More Options" row (10 rows = Meta's hard limit).
-func primaryMenuRows(t Strings) [][3]string {
-	rows := menuRows(t)
-	primary := make([][3]string, 0, metaListMaxRows)
-	primary = append(primary, rows[:9]...)
-	primary = append(primary, [3]string{"opt_more", t.OptMoreOptions, ""})
-	return primary
-}
-
-// secondaryMenuRows returns the options revealed by "More Options": 10.
-func secondaryMenuRows(t Strings) [][3]string {
-	return menuRows(t)[9:]
 }
 
 func listID(ir *whatsapp.InteractiveReply) string {

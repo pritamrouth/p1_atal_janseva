@@ -53,7 +53,8 @@ func TestHandleMenuSelectionIgnoresStaleSlot(t *testing.T) {
 func TestDispatchInfoOptionsSendSameMessage(t *testing.T) {
 	m := &recordingMessenger{}
 	h := &Handler{wa: m}
-	want := I18n[defaultLang].TransparencyText + "\n\n" + I18n[defaultLang].ThankYou
+	want := "नेत्याबद्दल माहिती, पारदर्शकता फलक, कामाचा अहवाल, कार्यक्रम आणि बैठकीची माहिती, योजना आणि सेवा, जनसेवा कनेक्ट, नारीशक्ती, आणि अधिक पर्याय पाहण्यासाठी, कृपया भेट द्या: ataljanseva.in\n\n" +
+		"अटलजनसेवा नागरिक सेवेशी जोडलेले राहिल्याबद्दल धन्यवाद !!"
 
 	for n := 4; n <= 10; n++ {
 		m.texts = nil
@@ -69,7 +70,7 @@ func TestDispatchInfoOptionsSendSameMessage(t *testing.T) {
 	}
 }
 
-func TestMainMenuEndsWithMoreOptions(t *testing.T) {
+func TestMainMenuIncludesNariShakti(t *testing.T) {
 	m := &recordingMessenger{}
 	h := &Handler{wa: m}
 	sess := &store.Session{Lang: defaultLang}
@@ -80,12 +81,12 @@ func TestMainMenuEndsWithMoreOptions(t *testing.T) {
 		t.Fatalf("main menu rows = %d, want %d", len(m.lastRows), metaListMaxRows)
 	}
 	last := m.lastRows[len(m.lastRows)-1]
-	if last[0] != "opt_more" || last[1] != "अधिक पर्याय" {
-		t.Errorf("last row = %#v, want opt_more / अधिक पर्याय", last)
+	if last[0] != "opt_10" || last[1] != I18n[defaultLang].OptNariShakti {
+		t.Errorf("last row = %#v, want opt_10 / %q", last, I18n[defaultLang].OptNariShakti)
 	}
 }
 
-func TestMoreOptionsRowSendsRemainingOptions(t *testing.T) {
+func TestLegacyMoreOptionsSelectionRedrawsFullMenu(t *testing.T) {
 	m := &recordingMessenger{}
 	h := &Handler{wa: m}
 	sess := &store.Session{Step: store.StepMainMenu, Lang: defaultLang}
@@ -95,10 +96,14 @@ func TestMoreOptionsRowSendsRemainingOptions(t *testing.T) {
 	})
 
 	if m.lists != 1 {
-		t.Fatalf("more options sent %d lists, want 1", m.lists)
+		t.Fatalf("legacy more-options selection sent %d lists, want 1", m.lists)
 	}
-	if len(m.lastRows) != 1 || m.lastRows[0][0] != "opt_10" {
-		t.Errorf("more options rows = %#v, want opt_10", m.lastRows)
+	if len(m.lastRows) != metaListMaxRows {
+		t.Fatalf("legacy more-options selection returned %d rows, want %d", len(m.lastRows), metaListMaxRows)
+	}
+	last := m.lastRows[len(m.lastRows)-1]
+	if last[0] != "opt_10" || last[1] != I18n[defaultLang].OptNariShakti {
+		t.Errorf("last row = %#v, want opt_10 / %q", last, I18n[defaultLang].OptNariShakti)
 	}
 }
 
