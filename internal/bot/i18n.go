@@ -24,10 +24,12 @@ type Strings struct {
 	OptNariShakti      string
 
 	// Complaint sub-flow
-	ComplaintPrompt      string
-	InvalidDetails       string
-	ComplaintSuccess     string // %s = ticket ID
-	ComplaintAudioFailed string
+	ComplaintPrompt         string
+	ComplaintLocationPrompt string
+	ComplaintDetailsPrompt  string
+	InvalidDetails          string
+	ComplaintSuccess        string // %s = ticket ID
+	ComplaintAudioFailed    string
 
 	// Track sub-flow
 	TrackPrompt     string
@@ -99,7 +101,7 @@ Enter your full name:
 
 Describe your complaint:
 
-Enter the address or share the location where this complaint occurred:
+Enter the address, or share your location using WhatsApp's attachment (+) > Location option:
 
 Example:
 
@@ -108,6 +110,9 @@ Amit Sharma
 Garbage not collected in our area since 3 days
 
 Hanuman Chowk, near Vitthal Rukmini Temple, Jintur`,
+
+		ComplaintLocationPrompt: `Location received. Please send your full name and describe the complaint. You can send just those two details.`,
+		ComplaintDetailsPrompt:  `Details received. Please share the location using WhatsApp's attachment (+) > Location option, or send the address as text.`,
 
 		InvalidDetails: `We couldn't understand the details you sent.
 
@@ -222,7 +227,7 @@ With this feature, women can offer or explore local services, find job opportuni
 
 आपल्या तक्रारीचे वर्णन करा:
 
-जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा लोकेशन शेअर करा:
+जिथे ही तक्रार घडली आहे त्या ठिकाणचा पत्ता टाका किंवा WhatsApp मधील अटॅचमेंट (+) > लोकेशन पर्यायातून लोकेशन शेअर करा:
 
 उदाहरण:
 
@@ -231,6 +236,9 @@ With this feature, women can offer or explore local services, find job opportuni
 आमच्या भागात गेले 3 दिवस कचरा उचलला गेला नाही
 
 हनुमान चौक, विठ्ठल रुक्मिणी मंदिराजवळ, जिंतूर`,
+
+		ComplaintLocationPrompt: `लोकेशन मिळाले. कृपया आपले पूर्ण नाव आणि तक्रारीचे वर्णन पाठवा. फक्त ही दोन माहिती पाठवली तरी चालेल.`,
+		ComplaintDetailsPrompt:  `माहिती मिळाली. कृपया WhatsApp मधील अटॅचमेंट (+) > लोकेशन पर्यायातून लोकेशन शेअर करा किंवा पत्ता मजकूर स्वरूपात पाठवा.`,
 
 		InvalidDetails: `आपण पाठवलेली माहिती समजण्यात आली नाही.
 
@@ -345,7 +353,7 @@ TKT4821907`,
 
 अपनी शिकायत का वर्णन करें:
 
-वह पता दर्ज करें या लोकेशन शेयर करें जहाँ यह शिकायत हुई है:
+जहाँ यह शिकायत हुई है वह पता दर्ज करें या WhatsApp के अटैचमेंट (+) > लोकेशन विकल्प से लोकेशन शेयर करें:
 
 उदाहरण:
 
@@ -354,6 +362,9 @@ TKT4821907`,
 हमारे इलाके में पिछले 3 दिनों से कचरा नहीं उठाया गया है
 
 हनुमान चौक, विठ्ठल रुक्मिणी मंदिर के पास, जिंतूर`,
+
+		ComplaintLocationPrompt: `लोकेशन मिल गई। कृपया अपना पूरा नाम और शिकायत का विवरण भेजें। आप केवल ये दोनों जानकारी भेज सकते हैं।`,
+		ComplaintDetailsPrompt:  `जानकारी मिल गई। कृपया WhatsApp के अटैचमेंट (+) > लोकेशन विकल्प से लोकेशन शेयर करें या पता टेक्स्ट में भेजें।`,
 
 		InvalidDetails: `हम आपके द्वारा भेजी गई जानकारी को समझ नहीं सके।
 

@@ -66,6 +66,22 @@ func TestParseDetailsIncomplete(t *testing.T) {
 	}
 }
 
+func TestParseComplaintDetailsWithoutAddress(t *testing.T) {
+	raw := `Full Name: Amit Sharma
+Describe your complaint: Garbage not collected since 3 days`
+
+	got, ok := parseDetailsRequired(raw, complaintFields, 2)
+	if !ok {
+		t.Fatal("expected name and description to parse without an address")
+	}
+	if got["name"] != "Amit Sharma" || got["description"] != "Garbage not collected since 3 days" {
+		t.Errorf("details = %#v", got)
+	}
+	if _, ok := parseDetailsRequired("Full Name: Amit", complaintFields, 2); ok {
+		t.Fatal("expected failure when description is missing")
+	}
+}
+
 func TestParseMeetingDetails(t *testing.T) {
 	raw := `Full Name:
 Preferred Date (DD-MM-YYYY):

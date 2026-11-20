@@ -52,6 +52,7 @@ type Message struct {
 	Text        *TextMessage      `json:"text,omitempty"`
 	Interactive *InteractiveReply `json:"interactive,omitempty"`
 	Audio       *AudioMessage     `json:"audio,omitempty"`
+	Location    *LocationMessage  `json:"location,omitempty"`
 	// ContactName is the WhatsApp profile name of the sender, filled in by
 	// Messages() from the webhook's contacts array.
 	ContactName string `json:"-"`
@@ -67,6 +68,14 @@ type AudioMessage struct {
 	MimeType string `json:"mime_type"`
 	SHA256   string `json:"sha256"`
 	Voice    bool   `json:"voice"`
+}
+
+// LocationMessage is a location shared by a WhatsApp user.
+type LocationMessage struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Name      string  `json:"name"`
+	Address   string  `json:"address"`
 }
 
 type InteractiveReply struct {

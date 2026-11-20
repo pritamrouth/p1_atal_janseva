@@ -122,3 +122,54 @@ func TestHandleMenuSelectionRetiredOptionRedrawsMenu(t *testing.T) {
 		t.Fatalf("retired option selection sent %d lists, want 1", m.lists)
 	}
 }
+
+func TestComplaintLocationAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		location *whatsapp.LocationMessage
+		want     string
+		wantErr  bool
+	}{
+		{
+			name: "address and place name",
+			location: &whatsapp.LocationMessage{
+				Name:    "Town Hall",
+				Address: "Main Road, Jintur",
+			},
+			want: "Town Hall, Main Road, Jintur",
+		},
+		{
+			name: "coordinates fallback",
+			location: &whatsapp.LocationMessage{
+				Latitude:  19.8342,
+				Longitude: 76.1094,
+			},
+			want: "Coordinates: 19.834200, 76.109400 (https://maps.google.com/?q=19.834200,76.109400)",
+		},
+		{
+			name:     "missing location data",
+			location: &whatsapp.LocationMessage{},
+			wantErr:  true,
+		},
+		{
+			name: "out of range coordinates",
+			location: &whatsapp.LocationMessage{
+				Latitude:  91,
+				Longitude: 76,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := complaintLocationAddress(tt.location)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("complaintLocationAddress() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("complaintLocationAddress() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

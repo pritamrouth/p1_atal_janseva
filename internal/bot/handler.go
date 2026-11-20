@@ -163,6 +163,8 @@ func (h *Handler) HandleRaw(msg whatsapp.Message) {
 			h.handleComplaintDetails(ctx, phone, sess, msg.Text.Body)
 		case msg.Type == "audio" && msg.Audio != nil:
 			h.handleComplaintAudio(ctx, phone, sess, msg.Audio, msg.ContactName)
+		case msg.Type == "location" && msg.Location != nil:
+			h.handleComplaintLocation(ctx, phone, sess, msg.Location)
 		default:
 			h.promptComplaint(ctx, phone, sess)
 		}
@@ -329,6 +331,9 @@ func (h *Handler) dispatchOption(ctx context.Context, phone string, sess *store.
 
 	switch n {
 	case 1: // Raise complaint
+		sess.PendingComplaintName = ""
+		sess.PendingComplaintDescription = ""
+		sess.PendingComplaintAddress = ""
 		sess.Step = store.StepComplaint
 		if err := h.store.Save(ctx, sess); err != nil {
 			slog.Error("save session", "phone", phone, "err", err)
@@ -388,18 +393,83 @@ const (
 func (h *Handler) handleComplaintDetails(ctx context.Context, phone string, sess *store.Session, raw string) {
 	t := h.t(sess)
 
-	details, ok := parseDetails(raw, complaintFields)
+	details, ok := parseDetailsRequired(raw, complaintFields, 2)
 	if !ok {
 		_ = h.wa.SendText(ctx, phone, t.InvalidDetails+"\n\n"+t.ComplaintPrompt)
 		return
 	}
 
+	address := details["address"]
+	if address == "" {
+		address = sess.PendingComplaintAddress
+	}
+	if address == "" {
+		sess.PendingComplaintName = details["name"]
+		sess.PendingComplaintDescription = details["description"]
+		if err := h.store.Save(ctx, sess); err != nil {
+			slog.Error("save complaint draft", "phone", phone, "err", err)
+			return
+		}
+		_ = h.wa.SendText(ctx, phone, t.ComplaintDetailsPrompt)
+		return
+	}
+
+	h.createTextComplaint(ctx, phone, sess, details["name"], details["description"], address)
+}
+
+func (h *Handler) handleComplaintLocation(ctx context.Context, phone string, sess *store.Session, location *whatsapp.LocationMessage) {
+	address, err := complaintLocationAddress(location)
+	if err != nil {
+		slog.Warn("invalid complaint location", "phone", phone, "err", err)
+		_ = h.wa.SendText(ctx, phone, h.t(sess).ComplaintPrompt)
+		return
+	}
+
+	sess.PendingComplaintAddress = address
+	if sess.PendingComplaintName == "" || sess.PendingComplaintDescription == "" {
+		if err := h.store.Save(ctx, sess); err != nil {
+			slog.Error("save complaint location", "phone", phone, "err", err)
+			return
+		}
+		_ = h.wa.SendText(ctx, phone, h.t(sess).ComplaintLocationPrompt)
+		return
+	}
+
+	h.createTextComplaint(ctx, phone, sess, sess.PendingComplaintName, sess.PendingComplaintDescription, address)
+}
+
+func complaintLocationAddress(location *whatsapp.LocationMessage) (string, error) {
+	if location == nil {
+		return "", fmt.Errorf("missing location")
+	}
+	address := strings.TrimSpace(location.Address)
+	name := strings.TrimSpace(location.Name)
+	if address != "" && name != "" && !strings.EqualFold(address, name) {
+		return name + ", " + address, nil
+	}
+	if address != "" {
+		return address, nil
+	}
+	if name != "" {
+		return name, nil
+	}
+	if location.Latitude < -90 || location.Latitude > 90 ||
+		location.Longitude < -180 || location.Longitude > 180 ||
+		(location.Latitude == 0 && location.Longitude == 0) {
+		return "", fmt.Errorf("location has no address or valid coordinates")
+	}
+	return fmt.Sprintf("Coordinates: %.6f, %.6f (https://maps.google.com/?q=%.6f,%.6f)",
+		location.Latitude, location.Longitude, location.Latitude, location.Longitude), nil
+}
+
+func (h *Handler) createTextComplaint(ctx context.Context, phone string, sess *store.Session, name, description, address string) {
+	t := h.t(sess)
 	g, err := h.api.CreateGrievance(ctx, api.GrievanceRequest{
 		NagarsevakID: sess.NagarsevakSlug,
-		Name:         details["name"],
+		Name:         name,
 		Mobile:       api.Mobile10(phone),
-		Description:  details["description"],
-		Address:      details["address"],
+		Description:  description,
+		Address:      address,
 		Ward:         sess.NagarsevakWard,
 	})
 	if err != nil {
@@ -714,6 +784,9 @@ func (h *Handler) returnToMenu(ctx context.Context, phone string, sess *store.Se
 	sess.PendingName = ""
 	sess.PendingDate = ""
 	sess.PendingReason = ""
+	sess.PendingComplaintName = ""
+	sess.PendingComplaintDescription = ""
+	sess.PendingComplaintAddress = ""
 	if err := h.store.Save(ctx, sess); err != nil {
 		slog.Error("save session", "phone", phone, "err", err)
 		return

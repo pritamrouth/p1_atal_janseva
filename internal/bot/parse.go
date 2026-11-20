@@ -104,6 +104,17 @@ var noisePrefixes = []string{
 // "Example:" header are ignored. Returns the extracted values (keyed by
 // fieldDef.key) and true on success.
 func parseDetails(raw string, defs []fieldDef) (map[string]string, bool) {
+	return parseDetailsRequired(raw, defs, len(defs))
+}
+
+// parseDetailsRequired extracts fields like parseDetails but allows trailing
+// optional fields, as used when the complaint address will arrive separately
+// as a WhatsApp location message.
+func parseDetailsRequired(raw string, defs []fieldDef, required int) (map[string]string, bool) {
+	if required < 1 || required > len(defs) {
+		return nil, false
+	}
+
 	out := make(map[string]string, len(defs))
 	current := ""
 	labeled := false
@@ -153,9 +164,9 @@ func parseDetails(raw string, defs []fieldDef) (map[string]string, bool) {
 	}
 
 	if labeled {
-		for _, d := range defs {
+		for i, d := range defs {
 			out[d.key] = strings.TrimSpace(out[d.key])
-			if out[d.key] == "" {
+			if i < required && out[d.key] == "" {
 				return nil, false
 			}
 		}
@@ -163,8 +174,16 @@ func parseDetails(raw string, defs []fieldDef) (map[string]string, bool) {
 	}
 
 	// Positional fallback: one value per line in field order.
-	if len(positional) < len(defs) {
+	if len(positional) < required {
 		return nil, false
+	}
+	if len(positional) < len(defs) {
+		for i, d := range defs {
+			if i < len(positional) {
+				out[d.key] = cleanValue(positional[i])
+			}
+		}
+		return out, true
 	}
 	for i, d := range defs {
 		if i < len(defs)-1 {

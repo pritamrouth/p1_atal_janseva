@@ -66,6 +66,11 @@ type Session struct {
 	PendingName   string `json:"pending_name,omitempty"`
 	PendingDate   string `json:"pending_date,omitempty"`
 	PendingReason string `json:"pending_reason,omitempty"`
+
+	// Draft complaint details and location, collected across text/location messages.
+	PendingComplaintName        string `json:"pending_complaint_name,omitempty"`
+	PendingComplaintDescription string `json:"pending_complaint_description,omitempty"`
+	PendingComplaintAddress     string `json:"pending_complaint_address,omitempty"`
 }
 
 // Store is a Redis-backed session store.
